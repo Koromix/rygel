@@ -163,7 +163,10 @@ TRY_NUMBER(double, napi_get_value_double, double, napi_get_value_bigint_int64, i
 
 static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr)
 {
-    // Fast path for BigInt
+    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
+        return true;
+
+    // BigInt pointers
     {
         uint64_t u64;
         bool lossless;
@@ -174,9 +177,6 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
             return true;
         }
     }
-
-    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
-        return true;
 
     napi_valuetype kind = GetKindOf(env, value);
 
@@ -200,7 +200,12 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
 
 static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out_ptr, Size *out_len)
 {
-    // Fast path for BigInt
+    if (size_t len = 0; node_api_get_buffer_info(env, value, out_ptr, &len) == napi_ok) {
+        *out_len = (Size)len;
+        return true;
+    }
+
+    // BigInt pointers
     {
         uint64_t u64;
         bool lossless;
@@ -212,11 +217,6 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
 
             return true;
         }
-    }
-
-    if (size_t len = 0; node_api_get_buffer_info(env, value, out_ptr, &len) == napi_ok) {
-        *out_len = (Size)len;
-        return true;
     }
 
     napi_valuetype kind = GetKindOf(env, value);
@@ -250,7 +250,10 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
 // Use with care :)
 static K_FORCE_INLINE int TryPointerFast(napi_env env, napi_value value, void **out_ptr)
 {
-    // Fast path for BigInt
+    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
+        return 0;
+
+    // BigInt pointers
     {
         uint64_t u64;
         bool lossless;
@@ -261,9 +264,6 @@ static K_FORCE_INLINE int TryPointerFast(napi_env env, napi_value value, void **
             return 0;
         }
     }
-
-    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
-        return 0;
 
     napi_valuetype kind = GetKindOf(env, value);
 
