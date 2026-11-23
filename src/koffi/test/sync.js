@@ -510,8 +510,8 @@ async function test() {
                     {
                         let disposed = koffi.stats().disposed;
 
-                        let str = PrintFmt(`foo ${i % 2 ? '%d' : '%u'} %g %s`, i % 2 ? 'int' : 'uint', 200, 'double', 1.5, 'str', 'BAR');
-                        assert.equal(str, 'foo 200 1.5 BAR');
+                        let str = PrintFmt(`foo %s ${i % 2 ? '%d' : '%g'} %g %s`, 'str', 'FOO', i % 2 ? 'int' : 'double', 200, 'double', 1.5, 'str', 'BAR');
+                        assert.equal(str, 'foo FOO 200 1.5 BAR');
 
                         assert.equal(koffi.stats().disposed, disposed + 1);
                     }
