@@ -501,28 +501,32 @@ async function test() {
         }
 
         // Classic variadic print
-        for (let i = 0; i < 10; i++) {
-            for (let j = 0; j < 10; j++) {
-                // char
-                {
-                    let disposed = koffi.stats().disposed;
+        {
+            let test_wchar = (detectGlibc() || process.platform == 'win32');
 
-                    let str = PrintFmt(`foo ${i % 2 ? '%d' : '%u'} %g %s`, i % 2 ? 'int' : 'uint', 200, 'double', 1.5, 'str', 'BAR');
-                    assert.equal(str, 'foo 200 1.5 BAR');
+            for (let i = 0; i < 10; i++) {
+                for (let j = 0; j < 10; j++) {
+                    // char
+                    {
+                        let disposed = koffi.stats().disposed;
 
-                    assert.equal(koffi.stats().disposed, disposed + 1);
-                }
+                        let str = PrintFmt(`foo ${i % 2 ? '%d' : '%u'} %g %s`, i % 2 ? 'int' : 'uint', 200, 'double', 1.5, 'str', 'BAR');
+                        assert.equal(str, 'foo 200 1.5 BAR');
 
-                // wchar_t
-                {
-                    let disposed = koffi.stats().disposed;
+                        assert.equal(koffi.stats().disposed, disposed + 1);
+                    }
 
-                    let msvc = (process.platform == 'win32' && process.env.MSYSTEM == null);
-                    let fmt = msvc ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
-                    let str = PrintFmtWide(fmt, 'int', 200, 'double', 1.5, 'str', 'BAR', 'wchar_t *', '\u{1F600} ><');
-                    assert.equal(str, 'foo 200 1.5 BAR \u{1F600} ><');
+                    // wchar_t
+                    if (test_wchar) {
+                        let disposed = koffi.stats().disposed;
 
-                    assert.equal(koffi.stats().disposed, disposed + 1);
+                        let msvc = (process.platform == 'win32' && process.env.MSYSTEM == null);
+                        let fmt = msvc ? 'foo %d %g %S %s' : 'foo %d %g %s %ls';
+                        let str = PrintFmtWide(fmt, 'int', 200, 'double', 1.5, 'str', 'BAR', 'wchar_t *', '\u{1F600} ><');
+                        assert.equal(str, 'foo 200 1.5 BAR \u{1F600} ><');
+
+                        assert.equal(koffi.stats().disposed, disposed + 1);
+                    }
                 }
             }
         }
