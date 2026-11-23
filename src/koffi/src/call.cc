@@ -958,22 +958,6 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
     return PushPointerFallback(value, kind, type, directions, out_ptr);
 }
 
-bool CallData::TryPointerFast(napi_value value, void **out_ptr, napi_valuetype *out_kind)
-{
-    void *ptr = nullptr;
-    Size len = 0;
-
-    if (TryPointer(env, value, &ptr, &len)) {
-        *out_ptr = ptr;
-        return true;
-    }
-
-    // Set upon failure to help caller
-    *out_kind = (napi_valuetype)len;
-
-    return false;
-}
-
 bool CallData::PushPointerFallback(napi_value value, napi_valuetype kind, const TypeInfo *type, int directions, void **out_ptr)
 {
     const TypeInfo *ref = type->ref.type;
@@ -1128,17 +1112,17 @@ unexpected:
 bool CallData::PushCallback(napi_value value, const TypeInfo *type, void **out_ptr)
 {
     void *ptr = nullptr;
-    Size len = 0;
 
 restart:
+    int ret = TryPointerFast(env, value, &ptr);
 
-    if (TryPointer(env, value, &ptr, &len)) {
+    if (!ret) {
         *out_ptr = ptr;
         return true;
     }
 
-    // When TryPointer fails, it stuffs the napi_valuetype (kind) in out_len to help
-    napi_valuetype kind = (napi_valuetype)len;
+    // When TryPointerFast fails, it stuffs the napi_valuetype (kind) in the return value
+    napi_valuetype kind = (napi_valuetype)ret;
 
     if (kind == napi_function) {
         Napi::Function func = Napi::Function(env, value);

@@ -246,6 +246,46 @@ static K_FORCE_INLINE bool TryPointer(napi_env env, napi_value value, void **out
     return false;
 }
 
+// This stuffs the napi_valuetype (kind) in the return value, which is reversed: 0 (napi_undefined) means success
+// Use with care :)
+static K_FORCE_INLINE int TryPointerFast(napi_env env, napi_value value, void **out_ptr)
+{
+    // Fast path for BigInt
+    {
+        uint64_t u64;
+        bool lossless;
+        napi_status status = napi_get_value_bigint_uint64(env, value, &u64, &lossless);
+
+        if (status == napi_ok) {
+            *out_ptr = (void *)(uintptr_t)u64;
+            return 0;
+        }
+    }
+
+    if (node_api_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
+        return 0;
+
+    napi_valuetype kind = GetKindOf(env, value);
+
+    if (IsNullOrUndefined(kind)) {
+        *out_ptr = nullptr;
+        return 0;
+    } else if (kind == napi_number) {
+        int64_t i;
+        napi_status status = napi_get_value_int64(env, value, &i);
+        K_ASSERT(status == napi_ok);
+
+        *out_ptr = (void *)(uintptr_t)i;
+        return 0;
+    }
+
+    if (napi_get_arraybuffer_info(env, value, out_ptr, nullptr) == napi_ok)
+        return 0;
+
+    K_ASSERT(kind != 0);
+    return (int)kind;
+}
+
 static K_FORCE_INLINE bool TryBuffer(napi_env env, napi_value value, Span<uint8_t> *out_buffer)
 {
     void *ptr = nullptr;

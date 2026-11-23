@@ -360,12 +360,10 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(PushPointerFast) {
         napi_value arg = *argp++;
 
-        // Needed for fallback path
-        napi_valuetype kind;
-
-        if (!call->TryPointerFast(arg, (void **)(base + op->a), &kind)) [[unlikely]] {
+        if (int ret = TryPointerFast(call->env, arg, (void **)(base + op->a))) [[unlikely]] {
             const TypeInfo *type = GetType(call->instance, op->b);
             int directions = GetTypeDirections(op->b);
+            napi_valuetype kind = (napi_valuetype)ret;
 
             if (!call->PushPointerFallback(arg, kind, type, directions, (void **)(base + op->a)))
                 return nullptr;
@@ -723,17 +721,13 @@ napi_value RunForward(CallData *call, uint8_t *base, napi_value *argp, const OpD
     FWD(PointerToInt32) {
         napi_value arg = *argp++;
 
-        {
-            // Needed for fallback path
-            napi_valuetype kind;
+        if (int ret = TryPointerFast(call->env, arg, (void **)(base + op->a))) [[unlikely]] {
+            const TypeInfo *type = GetType(call->instance, op->b);
+            int directions = GetTypeDirections(op->b);
+            napi_valuetype kind = (napi_valuetype)ret;
 
-            if (!call->TryPointerFast(arg, (void **)(base + op->a), &kind)) [[unlikely]] {
-                const TypeInfo *type = GetType(call->instance, op->b);
-                int directions = GetTypeDirections(op->b);
-
-                if (!call->PushPointerFallback(arg, kind, type, directions, (void **)(base + op->a)))
-                    return nullptr;
-            }
+            if (!call->PushPointerFallback(arg, kind, type, directions, (void **)(base + op->a)))
+                return nullptr;
         }
 
         uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
