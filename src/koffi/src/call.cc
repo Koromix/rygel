@@ -55,13 +55,25 @@ CallData::~CallData()
 }
 #endif
 
-napi_value CallData::Run(const FunctionInfo *func, napi_value *args, const OpData *inst)
+napi_value CallData::RunNormal(const FunctionInfo *func, napi_value *args, const OpData *inst)
 {
     DebugCall(func);
 
     uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
-    return RunForward(this, base, args, inst);
+    return RunForwardNormal(this, base, args, inst);
 }
+
+#if defined(EXTENDED_CALL_THRESHOLD)
+
+napi_value CallData::RunExtended(const FunctionInfo *func, napi_value *args, const OpData *inst)
+{
+    DebugCall(func);
+
+    uint8_t *base = AllocStack<uint8_t>(func->plan.stk_size);
+    return RunForwardExtended(this, base, args, inst);
+}
+
+#endif
 
 bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
 {
@@ -71,7 +83,7 @@ bool CallData::PrepareAsync(const FunctionInfo *func, napi_value *args)
     async_base = base;
 
     const OpData *first = func->plan.async.ptr;
-    napi_value ret = RunForward(this, base, args, first);
+    napi_value ret = RunForwardNormal(this, base, args, first);
 
     return ret == (napi_value)-1; // Should have reached Yield
 }
@@ -81,13 +93,13 @@ void CallData::ExecuteAsync(void *native)
     napi_value arg = (napi_value)native;
 
     const OpData *next = async_ip++;
-    RunForward(this, async_base, &arg, next);
+    RunForwardNormal(this, async_base, &arg, next);
 }
 
 napi_value CallData::EndAsync()
 {
     const OpData *next = async_ip++;
-    return RunForward(this, async_base, nullptr, next);
+    return RunForwardNormal(this, async_base, nullptr, next);
 }
 
 void CallData::Relay(Size idx, uint8_t *base)
@@ -99,7 +111,7 @@ void CallData::Relay(Size idx, uint8_t *base)
     args[proto->parameters.len] = (napi_value)trampoline;
 
     const OpData *first = proto->plan.relay.ptr;
-    trampoline->state = RunRelay(this, base, args, first);
+    trampoline->state = RunRelayNormal(this, base, args, first);
 }
 
 static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr, Size len, Size stride)
@@ -1354,7 +1366,13 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
 
     instance->sync_call = &call;
 
-    return call.Run(func, &arg, func->small_sync);
+#if defined(EXTENDED_CALL_THRESHOLD)
+    if constexpr(0 >= EXTENDED_CALL_THRESHOLD) {
+        return call.RunExtended(func, &arg, func->small_sync);
+    }
+#endif
+
+    return call.RunNormal(func, &arg, func->small_sync);
 }
 
 template <size_t N>
@@ -1380,7 +1398,13 @@ TRANSLATE_FUNC napi_value TranslateSimpleCall(napi_env env, napi_callback_info i
 
     instance->sync_call = &call;
 
-    return call.Run(func, args, func->small_sync);
+#if defined(EXTENDED_CALL_THRESHOLD)
+    if constexpr(N >= EXTENDED_CALL_THRESHOLD) {
+        return call.RunExtended(func, args, func->small_sync);
+    }
+#endif
+
+    return call.RunNormal(func, args, func->small_sync);
 }
 
 template <size_t N>
@@ -1406,7 +1430,13 @@ TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info i
 
     instance->sync_call = &call;
 
-    return call.Run(func, args, func->small_sync);
+#if defined(EXTENDED_CALL_THRESHOLD)
+    if constexpr(N >= EXTENDED_CALL_THRESHOLD) {
+        return call.RunExtended(func, args, func->small_sync);
+    }
+#endif
+
+    return call.RunNormal(func, args, func->small_sync);
 }
 
 template <size_t N>
@@ -1433,7 +1463,16 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
 
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func, args, func->small_sync);
+#if defined(EXTENDED_CALL_THRESHOLD)
+    if constexpr(N >= EXTENDED_CALL_THRESHOLD) {
+        napi_value ret = call.RunExtended(func, args, func->small_sync);
+        call.PopOutputArguments();
+
+        return ret;
+    }
+#endif
+
+    napi_value ret = call.RunNormal(func, args, func->small_sync);
     call.PopOutputArguments();
 
     return ret;
@@ -1462,7 +1501,16 @@ TRANSLATE_FUNC napi_value TranslateFixedCall(napi_env env, napi_callback_info in
 
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func, args);
+#if defined(EXTENDED_CALL_THRESHOLD)
+    if constexpr(N >= EXTENDED_CALL_THRESHOLD) {
+        napi_value ret = call.RunExtended(func, args, func->plan.sync.ptr);
+        call.PopOutputArguments();
+
+        return ret;
+    }
+#endif
+
+    napi_value ret = call.RunNormal(func, args, func->plan.sync.ptr);
     call.PopOutputArguments();
 
     return ret;
@@ -1476,7 +1524,16 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(napi_env env
 
     instance->sync_call = &call;
 
-    napi_value ret = call.Run(func, args);
+#if defined(EXTENDED_CALL_THRESHOLD)
+    if (func->parameters.len >= EXTENDED_CALL_THRESHOLD) {
+        napi_value ret = call.RunExtended(func, args, func->plan.sync.ptr);
+        call.PopOutputArguments();
+
+        return ret;
+    }
+#endif
+
+    napi_value ret = call.RunNormal(func, args, func->plan.sync.ptr);
     call.PopOutputArguments();
 
     return ret;
