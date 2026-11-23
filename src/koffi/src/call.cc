@@ -51,7 +51,7 @@ static napi_value (*translate_zero_call)(napi_env env, napi_callback_info info);
 #if defined(K_DEBUG)
 CallData::~CallData()
 {
-    K_ASSERT(!out_arguments.len);
+    K_ASSERT(!out_count);
 }
 #endif
 
@@ -141,9 +141,11 @@ static K_FORCE_INLINE void ConvertBuffer(BufferConversion conversion, void *ptr,
 
 void CallData::PopOutputArguments()
 {
-    if (out_arguments.len) {
+    if (out_count) {
         if (!env.IsExceptionPending()) {
-            for (const OutArgument &out: out_arguments) {
+            for (Size i = 0; i < out_count; i++) {
+                const OutArgument &out = out_args[i];
+
                 switch (out.kind) {
                     case OutArgument::Kind::Array: {
                         napi_value value = GetReferenceValue(env, out.ref);
@@ -207,14 +209,12 @@ void CallData::PopOutputArguments()
                         ConvertBuffer(out.type->ref.conversion, (uint8_t *)out.ptr, out.len, out.type->ref.stride);
                     } break;
                 }
+
+                node_api_delete_reference(env, out.ref);
             }
         }
 
-        for (const OutArgument &out: out_arguments) {
-            node_api_delete_reference(env, out.ref);
-        }
-
-        out_arguments.len = 0;
+        out_count = 0;
     }
 }
 
@@ -931,8 +931,9 @@ bool CallData::PushPointer(napi_value value, const TypeInfo *type, int direction
                     ConvertBuffer(type->ref.conversion, ptr, len, type->ref.stride);
                 }
 
-                OutArgument *out = out_arguments.AppendDefault();
+                OutArgument *out = &out_args[out_count++];
 
+                out->ref = nullptr;
                 out->kind = OutArgument::Kind::Convert;
                 out->ptr = ptr;
                 out->len = len;
@@ -1061,10 +1062,9 @@ bool CallData::PushPointerFallback(napi_value value, napi_valuetype kind, const 
         }
 
         if (directions & 2) {
-            OutArgument *out = out_arguments.AppendDefault();
+            OutArgument *out = &out_args[out_count++];
 
             NAPI_OK(napi_create_reference(env, value, 1, &out->ref));
-
             out->kind = out_kind;
             out->ptr = ptr;
             out->len = out_len;
@@ -1093,12 +1093,12 @@ bool CallData::PushPointerFallback(napi_value value, napi_valuetype kind, const 
         }
 
         if (directions & 2) {
-            OutArgument *out = out_arguments.AppendDefault();
+            OutArgument *out = &out_args[out_count++];
 
             NAPI_OK(napi_create_reference(env, value, 1, &out->ref));
-
             out->kind = OutArgument::Kind::Object;
             out->ptr = ptr;
+            out->len = 0;
             out->type = type;
         }
 
@@ -1374,6 +1374,32 @@ static TRANSLATE_FUNC napi_value TranslateZeroCall(napi_env env, napi_callback_i
 }
 
 template <size_t N>
+TRANSLATE_FUNC napi_value TranslateSimpleCall(napi_env env, napi_callback_info info)
+{
+    static_assert(N <= MaxDirectCallSize);
+    static_assert(MaxParameters >= N);
+
+    napi_value args[N + 1];
+    size_t count = N;
+    const FunctionInfo *func;
+
+    NAPI_OK(napi_get_cb_info(env, info, &count, args, nullptr, (void **)&func));
+
+    if (count < N) [[unlikely]] {
+        ThrowError<Napi::TypeError>(env, "Expected %1 arguments, got %2", N, count);
+        return nullptr;
+    }
+    args[N] = (napi_value)func->native;
+
+    InstanceData *instance = func->instance;
+    CallData call(env, instance, *func->sync_stack);
+
+    instance->sync_call = &call;
+
+    return call.Run(func, args, func->small_sync);
+}
+
+template <size_t N>
 TRANSLATE_FUNC napi_value TranslateDirectCall(napi_env env, napi_callback_info info)
 {
     static_assert(N <= MaxDirectCallSize);
@@ -1419,6 +1445,7 @@ TRANSLATE_FUNC napi_value TranslateOutputCall(napi_env env, napi_callback_info i
 
     InstanceData *instance = func->instance;
     CallData call(env, instance, nullptr, func->sync_memory);
+    call.out_count = 0;
 
     instance->sync_call = &call;
 
@@ -1432,6 +1459,7 @@ static TRANSLATE_FUNC K_FORCE_INLINE napi_value TranslateNormalCall(napi_env env
 {
     InstanceData *instance = func->instance;
     CallData call(env, instance, nullptr, func->sync_memory);
+    call.out_count = 0;
 
     instance->sync_call = &call;
 
@@ -1489,6 +1517,7 @@ static TRANSLATE_FUNC napi_value TranslateNormalCallDebugAsync(napi_env env, nap
 
     InstanceData *instance = func->instance;
     CallData call(env, instance, nullptr, func->sync_memory);
+    call.out_count = 0;
 
     instance->sync_call = &call;
 
@@ -1902,15 +1931,6 @@ Size GetTrampolineIndex(void *ptr)
     return ((uint8_t *)ptr - TrampolineStart) / TrampolineSize;
 }
 
-static bool HasOutputArguments(const FunctionInfo *func)
-{
-    // Direct calls skip CallData::PopOutputArguments(), which handles output arguments.
-    // If the function does not use any output argument, we can skip that!
-
-    return std::any_of(func->parameters.begin(), func->parameters.end(),
-                       [](const ParameterInfo &param) { return param.directions & 2; });
-}
-
 napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func)
 {
     Napi::Env env = instance->env;
@@ -1954,6 +1974,26 @@ static bool IsDebugAsyncEnabled()
     return debug;
 }
 
+static bool HasOutputArguments(const FunctionInfo *func)
+{
+    // Direct calls skip CallData::PopOutputArguments(), which handles output arguments.
+    // If the function does not use any output argument, we can skip that!
+
+    return std::any_of(func->parameters.begin(), func->parameters.end(),
+                       [](const ParameterInfo &param) { return param.directions & 2; });
+}
+
+static bool MayAllocate(const FunctionInfo *func)
+{
+    if (std::any_of(func->parameters.begin(), func->parameters.end(),
+                    [](const ParameterInfo &param) { return !IsInteger(param.type) && !IsFloat(param.type); }))
+        return true;
+    if (!IsInteger(func->ret) && !IsFloat(func->ret))
+        return true;
+
+    return false;
+}
+
 napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
 {
     Napi::Env env = instance->env;
@@ -1981,18 +2021,47 @@ napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func)
         } else if (func->parameters.len <= MaxDirectCallSize) {
             K_ASSERT(func->plan.sync.len <= K_LEN(func->small_sync));
 
-            switch (func->parameters.len) {
-                case 0: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, translate_zero_call, (void *)func->Ref(), &value)); } break;
-                case 1: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<1> : TranslateDirectCall<1>, (void *)func->Ref(), &value)); } break;
-                case 2: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<2> : TranslateDirectCall<2>, (void *)func->Ref(), &value)); } break;
-                case 3: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<3> : TranslateDirectCall<3>, (void *)func->Ref(), &value)); } break;
-                case 4: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<4> : TranslateDirectCall<4>, (void *)func->Ref(), &value)); } break;
-                case 5: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<5> : TranslateDirectCall<5>, (void *)func->Ref(), &value)); } break;
-                case 6: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<6> : TranslateDirectCall<6>, (void *)func->Ref(), &value)); } break;
-                case 7: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<7> : TranslateDirectCall<7>, (void *)func->Ref(), &value)); } break;
-                case 8: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, HasOutputArguments(func) ? TranslateOutputCall<8> : TranslateDirectCall<8>, (void *)func->Ref(), &value)); } break;
+            if (HasOutputArguments(func)) {
+                switch (func->parameters.len) {
+                    case 1: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<1>, (void *)func->Ref(), &value)); } break;
+                    case 2: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<2>, (void *)func->Ref(), &value)); } break;
+                    case 3: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<3>, (void *)func->Ref(), &value)); } break;
+                    case 4: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<4>, (void *)func->Ref(), &value)); } break;
+                    case 5: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<5>, (void *)func->Ref(), &value)); } break;
+                    case 6: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<6>, (void *)func->Ref(), &value)); } break;
+                    case 7: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<7>, (void *)func->Ref(), &value)); } break;
+                    case 8: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateOutputCall<8>, (void *)func->Ref(), &value)); } break;
 
-                default: { K_UNREACHABLE(); } break;
+                    default: { K_UNREACHABLE(); } break;
+                }
+            } else if (MayAllocate(func)) {
+                switch (func->parameters.len) {
+                    case 0: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, translate_zero_call, (void *)func->Ref(), &value)); } break;
+                    case 1: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<1>, (void *)func->Ref(), &value)); } break;
+                    case 2: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<2>, (void *)func->Ref(), &value)); } break;
+                    case 3: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<3>, (void *)func->Ref(), &value)); } break;
+                    case 4: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<4>, (void *)func->Ref(), &value)); } break;
+                    case 5: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<5>, (void *)func->Ref(), &value)); } break;
+                    case 6: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<6>, (void *)func->Ref(), &value)); } break;
+                    case 7: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<7>, (void *)func->Ref(), &value)); } break;
+                    case 8: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateDirectCall<8>, (void *)func->Ref(), &value)); } break;
+
+                    default: { K_UNREACHABLE(); } break;
+                }
+            } else {
+                switch (func->parameters.len) {
+                    case 0: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, translate_zero_call, (void *)func->Ref(), &value)); } break;
+                    case 1: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<1>, (void *)func->Ref(), &value)); } break;
+                    case 2: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<2>, (void *)func->Ref(), &value)); } break;
+                    case 3: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<3>, (void *)func->Ref(), &value)); } break;
+                    case 4: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<4>, (void *)func->Ref(), &value)); } break;
+                    case 5: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<5>, (void *)func->Ref(), &value)); } break;
+                    case 6: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<6>, (void *)func->Ref(), &value)); } break;
+                    case 7: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<7>, (void *)func->Ref(), &value)); } break;
+                    case 8: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateSimpleCall<8>, (void *)func->Ref(), &value)); } break;
+
+                    default: { K_UNREACHABLE(); } break;
+                }
             }
         } else {
             NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &value));

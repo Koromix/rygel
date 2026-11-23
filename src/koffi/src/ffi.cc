@@ -1208,6 +1208,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
 
     // Helps reduce dependent pointer chasing during call preparation
     func->sync_memory = &instance->sync_memory;
+    func->sync_stack = &instance->sync_memory.stack;
 
     if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, false, func))
@@ -1652,6 +1653,7 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
 
     // Helps reduce dependent pointer chasing during call preparation
     func->sync_memory = &instance->sync_memory;
+    func->sync_stack = &instance->sync_memory.stack;
 
     if (info.Length() >= 2) {
         if (!ParseClassicFunction(info, true, func))

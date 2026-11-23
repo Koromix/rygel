@@ -60,6 +60,12 @@ struct FunctionInfo;
 struct CallData;
 class AsyncCall;
 
+template <typename T>
+struct MemoryRange {
+    T *ptr;
+    T *end;
+};
+
 typedef void DisposeFunc (InstanceData *instance, const TypeInfo *type, const void *ptr);
 
 enum class BufferConversion: int8_t {
@@ -215,6 +221,7 @@ struct FunctionInfo {
 
     // Reduce dependent pointer chasing during call preparation with instance->sync_memory pointer copy
     InstanceMemory *sync_memory = nullptr;
+    MemoryRange<uint8_t> *sync_stack = nullptr;
 
     const char *name;
     const char *decorated_name; // Only set for some platforms/calling conventions
@@ -249,12 +256,6 @@ struct FunctionInfo {
             return;
         delete this;
     }
-};
-
-template <typename T>
-struct MemoryRange {
-    T *ptr;
-    T *end;
 };
 
 struct InstanceMemory {

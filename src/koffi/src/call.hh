@@ -38,29 +38,38 @@ struct alignas(8) CallData {
     InstanceData *instance = nullptr;
 
     MemoryRange<uint8_t> stack = {};
-    MemoryRange<uint8_t> heap = {};
-    TransientAllocator *transient = nullptr;
+    MemoryRange<uint8_t> heap;
+    TransientAllocator *transient;
 #if defined(K_DEBUG)
     uint8_t *new_stack;
     uint8_t *prev_heap;
 #endif
 
-    LocalArray<OutArgument, MaxParameters> out_arguments;
+    uint8_t *saved_sp;
 
     uint8_t *async_base;
     const OpData *async_ip;
 
-    uint8_t *saved_sp;
+#if defined(K_DEBUG)
+    Size out_count = 0;
+#else
+    Size out_count;
+#endif
+    OutArgument out_args[MaxParameters];
 
     CallData() = default;
     CallData(napi_env env, InstanceData *instance, TransientAllocator *transient)
-        : env(env), instance(instance), transient(transient) {}
+        : env(env), instance(instance), heap({}), transient(transient) {}
 #if defined(K_DEBUG)
+    CallData(napi_env env, InstanceData *instance, MemoryRange<uint8_t> stack)
+        : env(env), instance(instance), stack(stack), heap({}), transient(nullptr) {}
     CallData(napi_env env, InstanceData *instance, TransientAllocator *transient, InstanceMemory *mem)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient),
           new_stack(mem->stack.end), prev_heap(mem->heap.ptr) {}
     ~CallData();
 #else
+    CallData(napi_env env, InstanceData *instance, MemoryRange<uint8_t> stack)
+        : env(env), instance(instance), stack(stack) {}
     CallData(napi_env env, InstanceData *instance, TransientAllocator *transient, InstanceMemory *mem)
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient) {}
 #endif
@@ -164,7 +173,7 @@ inline T *CallData::AllocHeap(Size size)
 }
 
 class AsyncCall {
-    CallData call;
+    CallData call = {};
     bool resident = false;
 
     TransientAllocator transient;
