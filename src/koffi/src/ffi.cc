@@ -2969,38 +2969,62 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
             function wrap(info, specialize) {
                 let required = info.arguments.length;
 
-                let cache_func = null;
                 let cache_types = [Symbol()];
+                let cache_func = null;
 
-                let func = function (...args) {
-                    let extra = args.length - required;
-                    let match = (extra == cache_types.length * 2) &&
-                                cache_types.every((type, idx) => type === args[required + idx * 2]);
+                function fallback (...args) {
+                    let count = args.length;
 
-                    if (match) {
-                        for (let i = required + 1, j = required; i < args.length; i += 2)
-                            args[j++] = args[i];
-                    } else {
-                        if (extra % 2)
-                            throw new Error("Missing value argument for variadic call");
+                    if ((count - required) % 2)
+                        throw new Error("Missing value argument for variadic call");
 
-                        let types = [];
+                    let types = [];
 
-                        for (let i = required, j = required; i < args.length; i += 2) {
-                            types.push(args[i]);
-                            args[j++] = args[i + 1];
-                        }
-
-                        cache_func = specialize(...types);
-                        cache_types = types;
+                    for (let i = required, j = required; i < count; i += 2, j++) {
+                        types.push(args[i]);
+                        args[j] = args[i + 1];
                     }
 
-                    return cache_func(...args);
-                };
+                    let specialized = specialize(...types);
+                    let guarded = guard(specialized, types);
 
-                func.info = info;
+                    cache_func = guarded;
 
-                return func;
+                    return specialized(...args);
+                }
+
+                function guard(specialized, types) {
+                    let parameters = [...map(required, idx => `f${idx}`), ...map(types.length, idx => `t${idx}, a${idx}`)];
+                    let checks = [`arguments.length === ${required + types.length * 2}`, ...map(types.length, idx => `t${idx} === T${idx}`)];
+                    let args = [...map(required, idx => `f${idx}`), ...map(types.length, idx => `a${idx}`)];
+
+                    let body = `
+                        return function (${parameters.join(', ')}) {
+                            if (${checks.join(' && ')})
+                                return specialized(${args.join(', ')});
+                            return fallback.apply(this, arguments);
+                        };
+                    `;
+
+                    let builder = new Function(["specialized", "fallback", ...map(types.length, idx => `T${idx}`)], body);
+                    return builder(specialized, fallback, ...types);
+                }
+
+                cache_func = fallback;
+
+                function run(...args) { return cache_func(...args); }
+                run.info = info;
+
+                return run;
+            }
+
+            function map(length, func) {
+                let array = new Array(length);
+
+                for (let i = 0; i < length; i++)
+                    array[i] = func(i);
+
+                return array;
             }
 
             wrap
