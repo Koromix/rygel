@@ -18,6 +18,9 @@ void ThrowError(Napi::Env env, const char *msg, Args... args)
 
 static bool DecodePointer(napi_env env, napi_value value, void **out_ptr)
 {
+    if (napi_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
+        return true;
+
     // Fast path for BigInt
     {
         uint64_t u64;
@@ -29,9 +32,6 @@ static bool DecodePointer(napi_env env, napi_value value, void **out_ptr)
             return true;
         }
     }
-
-    if (napi_get_buffer_info(env, value, out_ptr, nullptr) == napi_ok)
-        return true;
 
     napi_valuetype kind = napi_undefined;
     napi_typeof(env, value, &kind);
