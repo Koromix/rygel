@@ -300,7 +300,7 @@ tbody th {
     text-align: center;
     font-size: 0.8em;
 }
-.table { overflow-x: scroll; }
+.table { overflow-x: auto; }
 
 hr {
     margin: 4px auto;
