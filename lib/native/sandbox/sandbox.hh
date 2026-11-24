@@ -20,7 +20,7 @@ static const char *const sb_IsolationFlagNames[] = {
     "Syscalls"
 };
 
-struct sb_RevealedPath {
+struct sb_SandboxPath {
     const char *path;
     bool readonly;
 };
@@ -44,7 +44,7 @@ class sb_SandboxBuilder {
 #if defined(__linux__)
     unsigned int isolation = 0;
 
-    HeapArray<sb_RevealedPath> reveals;
+    HeapArray<sb_SandboxPath> reveals;
     HeapArray<sb_SyscallFilter> filters;
 #endif
 
@@ -55,7 +55,7 @@ public:
 
     bool Init(unsigned int flags = UINT_MAX);
 
-    void RevealPaths(Span<const sb_RevealedPath> reveals);
+    void RevealPaths(Span<const sb_SandboxPath> reveals);
     void RevealPaths(Span<const char *const> paths, bool readonly);
 
 #if defined(__linux__)
@@ -66,5 +66,15 @@ public:
     // irrecoverable state.
     bool Apply();
 };
+
+#if defined(__linux__)
+
+bool sb_StartProxy(Span<const char *const> paths);
+
+// Behaves like open, so it sets errno and logs nothing (unless it's a fatal protocol error)
+int sb_OpenProxyFile(const char *filename, int flags);
+FILE *sb_OpenProxyFile(const char *path, const char *mode);
+
+#endif
 
 }

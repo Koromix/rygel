@@ -15,6 +15,7 @@
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <sys/stat.h>
+#include <sys/time.h>
 #include <sys/prctl.h>
 #include <sys/syscall.h>
 #include <sys/wait.h>
@@ -113,6 +114,14 @@ struct landlock_net_port_attr {
 
 namespace K {
 
+static int proxy_sock = -1;
+static std::mutex proxy_lock;
+
+struct ProxyRequest {
+    int flags;
+    char path[4096];
+};
+
 bool sb_SandboxBuilder::Init(unsigned int flags)
 {
     K_ASSERT(!isolation);
@@ -130,9 +139,9 @@ bool sb_SandboxBuilder::Init(unsigned int flags)
     return true;
 }
 
-void sb_SandboxBuilder::RevealPaths(Span<const sb_RevealedPath> paths)
+void sb_SandboxBuilder::RevealPaths(Span<const sb_SandboxPath> paths)
 {
-    for (sb_RevealedPath reveal: paths) {
+    for (sb_SandboxPath reveal: paths) {
         K_ASSERT(reveal.path[0] == '/');
 
         Span<const char> copy = TrimStrRight(reveal.path, K_PATH_SEPARATORS);
@@ -147,7 +156,7 @@ void sb_SandboxBuilder::RevealPaths(Span<const char *const> paths, bool readonly
     for (const char *path: paths) {
         K_ASSERT(path[0] == '/');
 
-        sb_RevealedPath reveal = {};
+        sb_SandboxPath reveal = {};
 
         Span<const char> copy = TrimStrRight(path, K_PATH_SEPARATORS);
 
@@ -207,7 +216,7 @@ static bool DropCapabilities()
     return true;
 }
 
-static bool InitLandlock(unsigned int isolation, Span<const sb_RevealedPath> reveals)
+static bool InitLandlock(unsigned int isolation, Span<const sb_SandboxPath> reveals)
 {
     LogDebug("Using Landlock for process isolation");
 
@@ -264,7 +273,7 @@ static bool InitLandlock(unsigned int isolation, Span<const sb_RevealedPath> rev
     }
     K_DEFER { CloseDescriptor(fd); };
 
-    for (const sb_RevealedPath &reveal: reveals) {
+    for (const sb_SandboxPath &reveal: reveals) {
         struct landlock_path_beneath_attr beneath = {};
 
         beneath.parent_fd = open(reveal.path, O_PATH | O_CLOEXEC);
@@ -387,7 +396,7 @@ static bool DoUnshare(unsigned int isolation)
     return true;
 }
 
-static bool InitNamespaces(unsigned int isolation, Span<const sb_RevealedPath> reveals)
+static bool InitNamespaces(unsigned int isolation, Span<const sb_SandboxPath> reveals)
 {
     LogDebug("Using Linux namespaces for process isolation");
 
@@ -542,7 +551,7 @@ static bool InitNamespaces(unsigned int isolation, Span<const sb_RevealedPath> r
         LogDebug("Sandbox FS root: '%1'", fs_root);
 
         // Mount requested paths
-        for (const sb_RevealedPath &reveal: reveals) {
+        for (const sb_SandboxPath &reveal: reveals) {
             const char *dest = Fmt(&temp_alloc, "%1%2", fs_root, reveal.path).ptr;
             int flags = MS_BIND | MS_REC | (reveal.readonly ? MS_RDONLY : 0);
 
@@ -800,6 +809,21 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                     if (ret < 0)
                         break;
                 }
+            } else if (TestStr(filter.name, "madvise/free")) {
+                int syscall = seccomp_syscall_resolve_name("madvise");
+                K_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                unsigned int advices[] = {
+                    MADV_FREE,
+                    MADV_DONTNEED
+                };
+
+                for (unsigned int advice: advices) {
+                    ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
+                                           SCMP_A2(SCMP_CMP_EQ, advice, 0));
+                    if (ret < 0)
+                        break;
+                }
             } else if (TestStr(filter.name, "clone/fork")) {
                 int syscall = seccomp_syscall_resolve_name("clone");
                 K_ASSERT(syscall != __NR_SCMP_ERROR);
@@ -856,6 +880,27 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                     if (ret < 0)
                         break;
                 }
+            } else if (TestStr(filter.name, "open/ro") ||
+                       TestStr(filter.name, "openat/ro")) {
+                static_assert(O_RDONLY == 0);
+
+                bool at = StartsWith(filter.name, "openat/");
+                int syscall = seccomp_syscall_resolve_name(at ? "openat" : "open");
+                K_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                unsigned int allowed = O_CLOEXEC | O_NONBLOCK | O_NOCTTY | O_NOFOLLOW | O_LARGEFILE;
+
+                ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
+                                       SCMP_CMP(at ? 2u : 1u, SCMP_CMP_MASKED_EQ, (uint32_t)~allowed, 0));
+            } else if (TestStr(filter.name, "fcntl/cloexec") ||
+                       TestStr(filter.name, "fcntl64/cloexec")) {
+                bool large = StartsWith(filter.name, "fcntl64/");
+                int syscall = seccomp_syscall_resolve_name(large ? "fcntl64" : "fcntl");
+                K_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
+                                       SCMP_A1(SCMP_CMP_EQ, F_SETFD, 0),
+                                       SCMP_A2(SCMP_CMP_EQ, FD_CLOEXEC, 0));
             } else {
                 int syscall = seccomp_syscall_resolve_name(filter.name);
 
@@ -920,6 +965,345 @@ bool sb_SandboxBuilder::Apply()
     }
 
     return true;
+}
+
+int sb_OpenProxyFile(const char *path, int flags)
+{
+    if (proxy_sock < 0) {
+        errno = ENOTCONN;
+        return -1;
+    }
+    if (!path) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    std::lock_guard<std::mutex> lock(proxy_lock);
+
+    int response = EIO;
+    int fd = -1;
+
+    K_DEFER_N(err_guard) {
+        K_DEFER_C(err = errno) { errno = err; };
+        close(fd);
+    };
+
+    // Send message
+    {
+        ProxyRequest req = {};
+
+        req.flags = flags;
+        CopyString(path, req.path);
+
+        if (K_RESTART_EINTR(send(proxy_sock, &req, K_SIZE(req), MSG_NOSIGNAL), < 0) < 0)
+            goto broken;
+    }
+
+    // Receive response and descriptor
+    {
+        alignas(struct cmsghdr) uint8_t control[256];
+
+        struct iovec iov = { &response, K_SIZE(response) };
+        struct msghdr msg = {
+            .msg_name = nullptr,
+            .msg_namelen = 0,
+            .msg_iov = &iov,
+            .msg_iovlen = 1,
+            .msg_control = control,
+            .msg_controllen = K_SIZE(control),
+            .msg_flags = 0
+        };
+
+        Size read = K_RESTART_EINTR(recvmsg(proxy_sock, &msg, MSG_TRUNC | MSG_CMSG_CLOEXEC), < 0);
+        if (read < 0)
+            goto broken;
+        struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+
+        if (cmsg) {
+            if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS ||
+                                                  cmsg->cmsg_len != CMSG_LEN(K_SIZE(int))) {
+                errno = EINVAL;
+                goto broken;
+            }
+
+            MemCpy(&fd, CMSG_DATA(cmsg), K_SIZE(int));
+        }
+
+        if (read != K_SIZE(response)) {
+            errno = EIO;
+            goto broken;
+        }
+
+        if (!response && !cmsg && (msg.msg_flags & MSG_CTRUNC)) {
+            errno = EMFILE;
+            return -1;
+        }
+    }
+
+    if (response > 0 && fd < 0) {
+        errno = response;
+        return -1;
+    }
+    if (response || fd < 0) {
+        errno = EIO;
+        goto broken;
+    }
+
+    err_guard.Disable();
+    return fd;
+
+broken:
+    LogError("Failed to send open request to proxy: %1", strerror(errno));
+    _exit(1);
+}
+
+static bool ValidateOpenFlags(int flags)
+{
+    const int AllowedFlags = O_RDONLY | O_NONBLOCK | O_NOCTTY | O_NOFOLLOW;
+
+    int access = flags & O_ACCMODE;
+    int test = flags & ~O_CLOEXEC; // We do it anyway
+
+    if (access != O_RDONLY)
+        return false;
+    if (test & ~AllowedFlags)
+        return false;
+
+    return true;
+}
+
+static bool RunProxy(pid_t parent, int sock, Span<const char *const> paths)
+{
+    HashSet<const char *> set(paths);
+
+    if (prctl(PR_SET_PDEATHSIG, SIGKILL) < 0) {
+        LogError("Failed to set PR_SET_PDEATHSIG: %1", strerror(errno));
+        return false;
+    }
+
+    // React to parent exit before PR_SET_PDEATHSIG
+    if (getppid() != parent)
+        return false;
+
+    if (sock > 3 && syscall(SYS_close_range, 3u, (unsigned int)sock - 1, 0u) < 0) {
+        LogError("Failed to clear file descriptors: %1", strerror(errno));
+        return false;
+    }
+    if (syscall(SYS_close_range, (unsigned int)sock + 1, UINT_MAX, 0u) < 0) {
+        LogError("Failed to clear file descriptors: %1", strerror(errno));
+        return false;
+    }
+
+    // Block all signals
+    {
+        sigset_t mask;
+        sigfillset(&mask);
+
+        if (sigprocmask(SIG_SETMASK, &mask, nullptr) < 0)
+            return false;
+    }
+
+    if (!DropCapabilities())
+        return false;
+
+    // Restrict system calls in file opener
+    {
+        const sb_SyscallFilter syscalls[] = {
+            { "exit", sb_FilterAction::Allow },
+            { "exit_group", sb_FilterAction::Allow },
+            { "brk", sb_FilterAction::Allow },
+            { "munmap", sb_FilterAction::Allow },
+            { "madvise/free", sb_FilterAction::Allow },
+            { "futex", sb_FilterAction::Allow },
+            { "futex_time64", sb_FilterAction::Allow },
+
+            { "open/ro", sb_FilterAction::Allow },
+            { "openat/ro", sb_FilterAction::Allow },
+            { "fcntl/cloexec", sb_FilterAction::Allow },
+            { "fcntl64/cloexec", sb_FilterAction::Allow },
+            { "close", sb_FilterAction::Allow },
+            { "recv", sb_FilterAction::Allow },
+            { "recvfrom", sb_FilterAction::Allow },
+            { "send", sb_FilterAction::Allow },
+            { "sendmsg", sb_FilterAction::Allow },
+            { "sendto", sb_FilterAction::Allow },
+            { "fstat", sb_FilterAction::Allow },
+            { "fstat64", sb_FilterAction::Allow },
+            { "newfstatat", sb_FilterAction::Allow },
+            { "fstatat64", sb_FilterAction::Allow },
+            { "statx", sb_FilterAction::Allow },
+
+            // Don't let log statements crash process
+            { "write", sb_FilterAction::Block },
+            { "writev", sb_FilterAction::Block }
+        };
+
+        if (!InitSeccomp(syscalls))
+            return false;
+    }
+
+    // Success, confirm to parent
+    {
+        char dummy = 0;
+        if (send(sock, &dummy, 1, MSG_NOSIGNAL) < 0)
+            return false;
+    }
+
+    for (;;) {
+        ProxyRequest req;
+        Size read = K_RESTART_EINTR(recv(sock, &req, K_SIZE(req), MSG_TRUNC), < 0);
+
+        if (read < 0)
+            break;
+        if (!read)
+            return true;
+
+        // Safety check
+        if (read != K_SIZE(ProxyRequest)) {
+            errno = EINVAL;
+            break;
+        }
+        req.path[K_SIZE(req.path) - 1] = 0;
+
+        int response = 0;
+        int fd = -1;
+        K_DEFER { close(fd); };
+
+        // Open requested file (if allowed)
+        {
+            bool allowed = set.Find(req.path);
+
+            if (allowed && ValidateOpenFlags(req.flags)) {
+                fd = open(req.path, req.flags | O_CLOEXEC | O_NOCTTY);
+                response = (fd >= 0) ? 0 : errno;
+            } else {
+                response = EACCES;
+            }
+        }
+
+        // Send response and descriptor
+        {
+            alignas(struct cmsghdr) uint8_t control[CMSG_SPACE(K_SIZE(int))] = {};
+
+            struct iovec iov = { &response, K_SIZE(response) };
+            struct msghdr msg = {
+                .msg_name = nullptr,
+                .msg_namelen = 0,
+                .msg_iov = &iov,
+                .msg_iovlen = 1,
+                .msg_control = nullptr,
+                .msg_controllen = 0,
+                .msg_flags = 0
+            };
+
+            if (fd >= 0) {
+                msg.msg_control = control;
+                msg.msg_controllen = K_SIZE(control);
+
+                struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+                K_ASSERT(cmsg);
+                cmsg->cmsg_level = SOL_SOCKET;
+                cmsg->cmsg_type = SCM_RIGHTS;
+                cmsg->cmsg_len = CMSG_LEN(K_SIZE(int));
+                MemCpy(CMSG_DATA(cmsg), &fd, K_SIZE(int));
+            }
+
+            if (K_RESTART_EINTR(sendmsg(sock, &msg, MSG_NOSIGNAL), < 0) < 0)
+                break;
+        }
+    }
+
+    LogDebug("Error while processing open request: %1", strerror(errno));
+    return false;
+}
+
+bool sb_StartProxy(Span<const char *const> paths)
+{
+    K_ASSERT(proxy_sock < 0);
+
+    int socks[2] = { -1, -1 };
+
+    K_DEFER {
+        close(socks[0]);
+        close(socks[1]);
+    };
+
+    if (socketpair(AF_UNIX, SOCK_SEQPACKET | SOCK_CLOEXEC, 0, socks) < 0)
+        return false;
+
+    // Give generous but limited time for messages
+    {
+        struct timeval tv = { .tv_sec = 10, .tv_usec = 0 };
+
+        setsockopt(socks[0], SOL_SOCKET, SO_SNDTIMEO, &tv, K_SIZE(tv));
+        setsockopt(socks[0], SOL_SOCKET, SO_RCVTIMEO, &tv, K_SIZE(tv));
+        setsockopt(socks[1], SOL_SOCKET, SO_SNDTIMEO, &tv, K_SIZE(tv));
+    }
+
+    pid_t parent = getpid();
+    pid_t pid = fork();
+
+    if (pid > 0) {
+        close(socks[1]);
+        socks[1] = -1;
+
+        // Wait for start ACK
+        {
+            char dummy;
+            Size bytes = K_RESTART_EINTR(recv(socks[0], &dummy, 1, MSG_TRUNC), < 0);
+
+            if (bytes != 1) {
+                LogError("Failed to start FS proxy: %1", strerror(bytes < 0 ? errno : ECONNRESET));
+                return false;
+            }
+        }
+
+        proxy_sock = socks[0];
+        socks[0] = -1;
+
+        return true;
+    } else if (!pid) {
+        close(socks[0]);
+        socks[0] = -1;
+
+        bool success = RunProxy(parent, socks[1], paths);
+        _exit(!success);
+    } else {
+        return false;
+    }
+}
+
+FILE *sb_OpenProxyFile(const char *path, const char *mode)
+{
+    if (!path || !mode || !mode[0]) {
+        errno = EINVAL;
+        return nullptr;
+    }
+
+    if (mode[0] != 'r') {
+        errno = strchr("wa", mode[0]) ? EACCES : EINVAL;
+        return nullptr;
+    }
+    for (Size i = 1; mode[i]; i++) {
+        if (!strchr("be", mode[i])) {
+            errno = strchr("+", mode[i]) ? EACCES : EINVAL;
+            return nullptr;
+        }
+    }
+
+    int fd = sb_OpenProxyFile(path, O_RDONLY | O_CLOEXEC);
+    if (fd < 0)
+        return nullptr;
+
+    FILE *fp = fdopen(fd, mode);
+    if (!fp) {
+        K_DEFER_C(err = errno) { errno = err; };
+        close(fd);
+
+        return nullptr;
+    }
+
+    return fp;
 }
 
 }

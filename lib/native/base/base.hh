@@ -3019,6 +3019,12 @@ private:
             Set(value);
         }
     }
+    HashTable(Span<const ValueType> items)
+    {
+        for (const ValueType &value: items) {
+            Set(value);
+        }
+    }
     ~HashTable() { Clear(); }
 
     HashTable(HashTable &&other) { *this = std::move(other); }
@@ -3543,6 +3549,7 @@ public:
 
     HashMap() = default;
     HashMap(std::initializer_list<Bucket> l) : table(l) {}
+    HashMap(Span<const Bucket> items) : table(items) {}
 
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }
@@ -3630,6 +3637,7 @@ public:
 
     HashSet() = default;
     HashSet(std::initializer_list<ValueType> l) : table(l) {}
+    HashSet(Span<const ValueType> items) : table(items) {}
 
     void Clear() { table.Clear(); }
     void RemoveAll() { table.RemoveAll(); }

@@ -14,6 +14,11 @@ bool sb_SandboxBuilder::Init(unsigned int)
     return false;
 }
 
+void sb_SandboxBuilder::RevealPaths(Span<const sb_SandboxPath>)
+{
+    K_ASSERT(false);
+}
+
 void sb_SandboxBuilder::RevealPaths(Span<const char *const>, bool)
 {
     K_ASSERT(false);
