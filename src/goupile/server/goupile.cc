@@ -15,6 +15,7 @@
 #include "../legacy/records.hh"
 #include "lib/native/http/http.hh"
 #include "lib/native/sandbox/sandbox.hh"
+#include "vendor/c-ares/include/ares.h"
 #if !defined(_WIN32)
     #include <signal.h>
     #include <sys/time.h>
@@ -54,16 +55,6 @@ static bool ApplySandbox(Span<const char *const> reveals)
     sb.RevealPaths(reveals, false);
 
 #if defined(__linux__)
-    // c-ares needs to access these files (or at least, try to)
-    sb.RevealPaths({
-        "/etc/resolv.conf",
-        "/etc/hosts",
-        "/etc/hostname",
-        "/etc/nsswitch.conf",
-        "/etc/netsvc.conf",
-        "/etc/svc.conf"
-    }, true);
-
     sb.FilterSyscalls({
         { "restart_syscall", sb_FilterAction::Allow },
         { "exit", sb_FilterAction::Allow },
@@ -1147,6 +1138,32 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         if (!gp_config.Validate())
             return 1;
     }
+
+#if defined(__linux__)
+    if (sandbox) {
+        LogInfo("Init DNS helper");
+
+        // c-ares needs to access these files (or at least, try to)
+        // If they were in a directory, I'd just allow it and we'd be done... but they are individual
+        // files that tend to be replaced (write/rename dance). Landlock uses inodes, not paths,
+        // which means that when a file gets replaced, it cannot be read anymore.
+        // Instead, start a helper process that can open the files for us. And patch c-ares to be
+        // able to use a custom opener (could also intercept open or fopen but this feels even worse).
+        bool success = sb_StartProxy({
+            "/etc/resolv.conf",
+            "/etc/hosts",
+            "/etc/hostname",
+            "/etc/nsswitch.conf",
+            "/etc/netsvc.conf",
+            "/etc/svc.conf"
+        });
+        if (!success)
+            return 1;
+
+        // Fucking hell
+        ares_set_fopen_callback(sb_OpenProxyFile);
+    }
+#endif
 
     LogInfo("Init assets");
     InitAssets();
