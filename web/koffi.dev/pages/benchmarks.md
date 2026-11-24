@@ -34,7 +34,7 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 <div class="benchmark table" data-platform="linux_x64" data-benchmark="raylib"></div>
 
 > [!NOTE]
-> The node-raylib project seems to be **somewhat abandoned as of 2026**. It is based on an older version of Raylib than the other implentations. It could likely be slightly faster than Koffi with some effort and more build optimizations (such as PGO).
+> The node-raylib project seems to be **somewhat abandoned as of 2026**. It is based on an older version of Raylib than the other implementations. It could likely be slightly faster than Koffi with some effort and more build optimizations (such as PGO).
 
 # macOS ARM64
 
@@ -91,7 +91,7 @@ This benchmark uses the CPU-based image drawing functions in Raylib. The calls a
 <div class="benchmark table" data-platform="win32_x64" data-benchmark="raylib"></div>
 
 > [!NOTE]
-> The node-raylib project seems to be **somewhat abandoned as of 2026**. It is based on an older version of Raylib than the other implentations. It could likely be slightly faster than Koffi with some effort and more build optimizations (Clang instead of MSVC, PGO, etc.).
+> The node-raylib project seems to be **somewhat abandoned as of 2026**. It is based on an older version of Raylib than the other implementations. It could likely be slightly faster than Koffi with some effort and more build optimizations (Clang instead of MSVC, PGO, etc.).
 
 # Running benchmarks
 
