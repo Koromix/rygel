@@ -61,9 +61,15 @@ static void default_free(void *p)
   free(p);
 }
 
+static FILE *default_fopen(const char *path, const char *mode)
+{
+  return fopen(path, mode);
+}
+
 static void *(*__ares_malloc)(size_t size)             = default_malloc;
 static void *(*__ares_realloc)(void *ptr, size_t size) = default_realloc;
 static void (*__ares_free)(void *ptr)                  = default_free;
+static FILE *(*__ares_fopen)(const char *path, const char *mode) = default_fopen;
 
 void *ares_malloc(size_t size)
 {
@@ -125,6 +131,11 @@ void *ares_realloc_zero_array(void *ptr, size_t orig_num, size_t new_num,
   return ares_realloc_zero(ptr, orig_total, new_total);
 }
 
+FILE *ares_fopen(const char *path, const char *mode)
+{
+  return __ares_fopen(path, mode);
+}
+
 int ares_library_init(int flags)
 {
   if (ares_initialized) {
@@ -153,6 +164,11 @@ int ares_library_init_mem(int flags, void *(*amalloc)(size_t size),
     __ares_free = afree;
   }
   return ares_library_init(flags);
+}
+
+void ares_set_fopen_callback(FILE *(*afopen)(const char *, const char *))
+{
+  __ares_fopen = afopen ? afopen : default_fopen;
 }
 
 void ares_library_cleanup(void)

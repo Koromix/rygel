@@ -38,4 +38,6 @@ CARES_EXTERN void *ares_malloc_zero_array(size_t num, size_t size);
 CARES_EXTERN void *ares_realloc_zero_array(void *ptr, size_t orig_num,
                                            size_t new_num, size_t size);
 
+CARES_EXTERN FILE *ares_fopen(const char *path, const char *mode);
+
 #endif

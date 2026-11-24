@@ -1445,7 +1445,7 @@ ares_status_t ares_buf_load_file(const char *filename, ares_buf_t *buf)
     return ARES_EFORMERR; /* LCOV_EXCL_LINE: DefensiveCoding */
   }
 
-  fp = fopen(filename, "rb");
+  fp = ares_fopen(filename, "rb");
   if (fp == NULL) {
     int error = errno;
     switch (error) {

@@ -1,0 +1,90 @@
+diff --git a/vendor/c-ares/include/ares.h b/vendor/c-ares/include/ares.h
+index 1e38463a04..e1bc168c39 100644
+--- a/vendor/c-ares/include/ares.h
++++ b/vendor/c-ares/include/ares.h
+@@ -94,6 +94,8 @@
+ #  include <jni.h>
+ #endif
+ 
++#include <stdio.h>
++
+ typedef CARES_TYPEOF_ARES_SOCKLEN_T ares_socklen_t;
+ typedef CARES_TYPEOF_ARES_SSIZE_T   ares_ssize_t;
+ 
+@@ -477,6 +479,8 @@ CARES_EXTERN int ares_library_init_mem(int flags, void *(*amalloc)(size_t size),
+                                        void *(*arealloc)(void  *ptr,
+                                                          size_t size));
+ 
++CARES_EXTERN void ares_set_fopen_callback(FILE *(*afopen)(const char *, const char *));
++
+ #if defined(ANDROID) || defined(__ANDROID__)
+ CARES_EXTERN void ares_library_init_jvm(JavaVM *jvm);
+ CARES_EXTERN int  ares_library_init_android(jobject connectivity_manager);
+diff --git a/vendor/c-ares/src/lib/ares_library_init.c b/vendor/c-ares/src/lib/ares_library_init.c
+index 17805d4dd0..4e08cf114e 100644
+--- a/vendor/c-ares/src/lib/ares_library_init.c
++++ b/vendor/c-ares/src/lib/ares_library_init.c
+@@ -61,9 +61,15 @@ static void default_free(void *p)
+   free(p);
+ }
+ 
++static FILE *default_fopen(const char *path, const char *mode)
++{
++  return fopen(path, mode);
++}
++
+ static void *(*__ares_malloc)(size_t size)             = default_malloc;
+ static void *(*__ares_realloc)(void *ptr, size_t size) = default_realloc;
+ static void (*__ares_free)(void *ptr)                  = default_free;
++static FILE *(*__ares_fopen)(const char *path, const char *mode) = default_fopen;
+ 
+ void *ares_malloc(size_t size)
+ {
+@@ -125,6 +131,11 @@ void *ares_realloc_zero_array(void *ptr, size_t orig_num, size_t new_num,
+   return ares_realloc_zero(ptr, orig_total, new_total);
+ }
+ 
++FILE *ares_fopen(const char *path, const char *mode)
++{
++  return __ares_fopen(path, mode);
++}
++
+ int ares_library_init(int flags)
+ {
+   if (ares_initialized) {
+@@ -155,6 +166,11 @@ int ares_library_init_mem(int flags, void *(*amalloc)(size_t size),
+   return ares_library_init(flags);
+ }
+ 
++void ares_set_fopen_callback(FILE *(*afopen)(const char *, const char *))
++{
++  __ares_fopen = afopen ? afopen : default_fopen;
++}
++
+ void ares_library_cleanup(void)
+ {
+   if (!ares_initialized) {
+diff --git a/vendor/c-ares/src/lib/include/ares_mem.h b/vendor/c-ares/src/lib/include/ares_mem.h
+index d980923e58..d780bf35c3 100644
+--- a/vendor/c-ares/src/lib/include/ares_mem.h
++++ b/vendor/c-ares/src/lib/include/ares_mem.h
+@@ -38,4 +38,6 @@ CARES_EXTERN void *ares_malloc_zero_array(size_t num, size_t size);
+ CARES_EXTERN void *ares_realloc_zero_array(void *ptr, size_t orig_num,
+                                            size_t new_num, size_t size);
+ 
++CARES_EXTERN FILE *ares_fopen(const char *path, const char *mode);
++
+ #endif
+diff --git a/vendor/c-ares/src/lib/str/ares_buf.c b/vendor/c-ares/src/lib/str/ares_buf.c
+index 3e08dd21e8..128da7d782 100644
+--- a/vendor/c-ares/src/lib/str/ares_buf.c
++++ b/vendor/c-ares/src/lib/str/ares_buf.c
+@@ -1445,7 +1445,7 @@ ares_status_t ares_buf_load_file(const char *filename, ares_buf_t *buf)
+     return ARES_EFORMERR; /* LCOV_EXCL_LINE: DefensiveCoding */
+   }
+ 
+-  fp = fopen(filename, "rb");
++  fp = ares_fopen(filename, "rb");
+   if (fp == NULL) {
+     int error = errno;
+     switch (error) {

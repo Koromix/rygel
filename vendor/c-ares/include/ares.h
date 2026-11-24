@@ -94,6 +94,8 @@
 #  include <jni.h>
 #endif
 
+#include <stdio.h>
+
 typedef CARES_TYPEOF_ARES_SOCKLEN_T ares_socklen_t;
 typedef CARES_TYPEOF_ARES_SSIZE_T   ares_ssize_t;
 
@@ -476,6 +478,8 @@ CARES_EXTERN int ares_library_init_mem(int flags, void *(*amalloc)(size_t size),
                                        void (*afree)(void *ptr),
                                        void *(*arealloc)(void  *ptr,
                                                          size_t size));
+
+CARES_EXTERN void ares_set_fopen_callback(FILE *(*afopen)(const char *, const char *));
 
 #if defined(ANDROID) || defined(__ANDROID__)
 CARES_EXTERN void ares_library_init_jvm(JavaVM *jvm);
