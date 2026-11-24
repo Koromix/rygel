@@ -2323,7 +2323,7 @@ static napi_value CallPointerSync(napi_env env, napi_callback_info info)
 {
     static_assert(MaxParameters >= 8);
 
-    napi_value args[MaxParameters + 3];
+    napi_value args[MaxParameters + 2];
     size_t count = 8;
     InstanceData *instance;
 
@@ -2354,10 +2354,7 @@ static napi_value CallPointerSync(napi_env env, napi_callback_info info)
         return nullptr;
     }
 
-    // The native function pointer shall come just after arguments
-    args[count] = (napi_value)ptr;
-
-    return CallPointer(env, type->proto, args + 2, count - 2);
+    return CallPointer(env, type->proto, MakeSpan(args + 2, count - 2), ptr);
 }
 
 static napi_value EncodeValue(napi_env env, napi_callback_info info)

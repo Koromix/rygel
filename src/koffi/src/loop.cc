@@ -301,21 +301,21 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
 
 #define INTEGER(Suffix, CType) \
         do { \
-            uint64_t ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
+            uint64_t ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
             return NewNumber(call->env, (CType)ret); \
         } while (false)
 #define INTEGER_SWAP(Suffix, CType) \
         do { \
-            uint64_t ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
+            uint64_t ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
             return NewNumber(call->env, ReverseBytes((CType)ret)); \
         } while (false)
 
     FWD(RunVoid) {
-        WRAP(CallG(*argp, base, &call->saved_sp));
+        WRAP(CallG(call->native, base, &call->saved_sp));
         return nullptr;
     }
     FWD(RunBool) {
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         return NewBool(call->env, ret & 0x1);
     }
     FWD(RunInt8) { INTEGER(G, int8_t); }
@@ -333,89 +333,89 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
     FWD(RunUInt64) { INTEGER(G, uint64_t); }
     FWD(RunUInt64S) { INTEGER_SWAP(G, uint64_t); }
     FWD(RunString) {
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString16) {
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char16_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString32) {
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char32_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunPointer) {
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunCallback) {
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
     FWD(RunRecord) { K_UNREACHABLE(); return nullptr; }
     FWD(RunUnion) { K_UNREACHABLE(); return nullptr; }
     FWD(RunArray) { K_UNREACHABLE(); return nullptr; }
     FWD(RunFloat32) {
-        float f = WRAP(CallF(*argp, base, &call->saved_sp));
+        float f = WRAP(CallF(call->native, base, &call->saved_sp));
         return NewNumber(call->env, f);
     }
     FWD(RunFloat64) {
-        double d = WRAP(CallD(*argp, base, &call->saved_sp));
+        double d = WRAP(CallD(call->native, base, &call->saved_sp));
         return NewNumber(call->env, d);
     }
     FWD(RunPrototype) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateG) {
-        auto ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallG(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateF) {
-        auto ret = WRAP(CallF(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallF(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateD) {
-        auto ret = WRAP(CallD(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallD(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGG) {
-        auto ret = WRAP(CallGG(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallGG(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDD) {
-        auto ret = WRAP(CallDD(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallDD(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGD) {
-        auto ret = WRAP(CallGD(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallGD(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDG) {
-        auto ret = WRAP(CallDG(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallDG(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateHfa) {
-        WRAP(CallHfa(*argp, base, &call->saved_sp));
+        WRAP(CallHfa(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, base, type);
@@ -425,16 +425,16 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
         uint8_t *ptr = call->AllocHeap(type->size);
 
         *(uint8_t **)(base + op->a1l) = ptr;
-        WRAP(CallG(*argp, base, &call->saved_sp));
+        WRAP(CallG(call->native, base, &call->saved_sp));
 
         return DecodeObject(call->instance, ptr, type);
     }
     FWD(RunVoidX) {
-        WRAP(CallGX(*argp, base, &call->saved_sp));
+        WRAP(CallGX(call->native, base, &call->saved_sp));
         return nullptr;
     }
     FWD(RunBoolX) {
-        uint64_t ret = WRAP(CallGX(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         return NewBool(call->env, ret & 0x1);
     }
     FWD(RunInt8X) { INTEGER(GX, int8_t); }
@@ -452,89 +452,89 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
     FWD(RunUInt64X) { INTEGER(GX, uint64_t); }
     FWD(RunUInt64SX) { INTEGER_SWAP(GX, uint64_t); }
     FWD(RunStringX) {
-        uint64_t ret = WRAP(CallGX(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString16X) {
-        uint64_t ret = WRAP(CallGX(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char16_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunString32X) {
-        uint64_t ret = WRAP(CallGX(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char32_t *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunPointerX) {
-        uint64_t ret = WRAP(CallGX(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
     }
     FWD(RunCallbackX) {
-        uint64_t ret = WRAP(CallGX(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         return WrapPointer(call->env, (void *)ret);
     }
     FWD(RunRecordX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunUnionX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunArrayX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunFloat32X) {
-        float f = WRAP(CallFX(*argp, base, &call->saved_sp));
+        float f = WRAP(CallFX(call->native, base, &call->saved_sp));
         return NewNumber(call->env, f);
     }
     FWD(RunFloat64X) {
-        double d = WRAP(CallDX(*argp, base, &call->saved_sp));
+        double d = WRAP(CallDX(call->native, base, &call->saved_sp));
         return NewNumber(call->env, d);
     }
     FWD(RunPrototypeX) { K_UNREACHABLE(); return nullptr; }
     FWD(RunAggregateGX) {
-        auto ret = WRAP(CallGX(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallGX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateFX) {
-        auto ret = WRAP(CallFX(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallFX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDX) {
-        auto ret = WRAP(CallDX(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallDX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGGX) {
-        auto ret = WRAP(CallGGX(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallGGX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDDX) {
-        auto ret = WRAP(CallDDX(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallDDX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateGDX) {
-        auto ret = WRAP(CallGDX(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallGDX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateDGX) {
-        auto ret = WRAP(CallDGX(*argp, base, &call->saved_sp));
+        auto ret = WRAP(CallDGX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, (const uint8_t *)&ret, type);
     }
     FWD(RunAggregateHfaX) {
-        WRAP(CallHfaX(*argp, base, &call->saved_sp));
+        WRAP(CallHfaX(call->native, base, &call->saved_sp));
         const TypeInfo *type = GetType(call->instance, op->b);
 
         return DecodeObject(call->instance, base, type);
@@ -544,7 +544,7 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
         uint8_t *ptr = call->AllocHeap(type->size);
 
         *(uint8_t **)(base + op->a1l) = ptr;
-        WRAP(CallGX(*argp, base, &call->saved_sp));
+        WRAP(CallGX(call->native, base, &call->saved_sp));
 
         return DecodeObject(call->instance, ptr, type);
     }
@@ -566,7 +566,7 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
                 return nullptr; \
             } \
              \
-            auto ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
+            auto ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
             return NewNumber(call->env, (DestType)ret); \
         } while (false)
 
@@ -595,7 +595,7 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
         if (!call->PushString(arg, 1, (const char **)(base + op->a))) [[unlikely]]
             return nullptr;
 
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         return NewNumber(call->env, (int32_t)ret);
     }
     FWD(Int32ToString) {
@@ -606,7 +606,7 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
             return nullptr;
         }
 
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = NewString(call->env, (const char *)ret);
         DISPOSE((void *)ret);
         return value;
@@ -624,7 +624,7 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
                 return nullptr;
         }
 
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         return NewNumber(call->env, (int32_t)ret);
     }
     FWD(Int32ToPointer) {
@@ -635,7 +635,7 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
             return nullptr;
         }
 
-        uint64_t ret = WRAP(CallG(*argp, base, &call->saved_sp));
+        uint64_t ret = WRAP(CallG(call->native, base, &call->saved_sp));
         napi_value value = WrapPointer(call->env, (void *)ret);
         DISPOSE((void *)ret);
         return value;
@@ -646,7 +646,7 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
 
 #define CALL(Suffix) \
         do { \
-            auto ret = WRAP(Call ## Suffix(*argp, base, &call->saved_sp)); \
+            auto ret = WRAP(Call ## Suffix(call->native, base, &call->saved_sp)); \
             memcpy(base, &ret, K_SIZE(ret)); \
         } while (false)
 #define DISPOSE() \
@@ -676,12 +676,12 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
     FWD(CallDD) { CALL(DD); return nullptr; }
     FWD(CallGD) { CALL(GD); return nullptr; }
     FWD(CallDG) { CALL(DG); return nullptr; }
-    FWD(CallHfa) { WRAP(CallHfa(*argp, base, &call->saved_sp)); return nullptr; }
+    FWD(CallHfa) { WRAP(CallHfa(call->native, base, &call->saved_sp)); return nullptr; }
     FWD(CallMem) {
         uint8_t *ptr = call->AllocHeap(op->b);
         *(uint8_t **)(base + op->a1l) = ptr;
 
-        WRAP(CallG(*argp, base, &call->saved_sp));
+        WRAP(CallG(call->native, base, &call->saved_sp));
         *(uint8_t **)base = ptr;
 
         return nullptr;
@@ -693,12 +693,12 @@ napi_value K_CONCAT(RunForward, RUN_SUFFIX)(CallData *call, uint8_t *base, napi_
     FWD(CallDDX) { CALL(DDX); return nullptr; }
     FWD(CallGDX) { CALL(GDX); return nullptr; }
     FWD(CallDGX) { CALL(DGX); return nullptr; }
-    FWD(CallHfaX) { WRAP(CallHfaX(*argp, base, &call->saved_sp)); return nullptr; }
+    FWD(CallHfaX) { WRAP(CallHfaX(call->native, base, &call->saved_sp)); return nullptr; }
     FWD(CallMemX) {
         uint8_t *ptr = call->AllocHeap(op->b);
         *(uint8_t **)(base + op->a1l) = ptr;
 
-        WRAP(CallGX(*argp, base, &call->saved_sp));
+        WRAP(CallGX(call->native, base, &call->saved_sp));
         *(uint8_t **)base = ptr;
 
         return nullptr;

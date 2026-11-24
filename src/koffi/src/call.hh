@@ -44,6 +44,7 @@ struct alignas(8) CallData {
     uint8_t *new_stack;
     uint8_t *prev_heap;
 #endif
+    void *native;
 
     uint8_t *saved_sp;
 
@@ -78,7 +79,7 @@ struct alignas(8) CallData {
     INLINE_UNITY napi_value RunExtended(const FunctionInfo *func, napi_value *args, const OpData *first); // Might not exist
 
     bool PrepareAsync(const FunctionInfo *func, napi_value *args);
-    void ExecuteAsync(void *native);
+    void ExecuteAsync();
     napi_value EndAsync();
 
     INLINE_UNITY void PopOutputArguments();
@@ -216,10 +217,8 @@ napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func);
 napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func);
 bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
-// Requires args[count] to contain the native function pointer (so just behind the actual
-// call arguments), with count being the number of arguments.
-// This function can mutate the array of arguments.
-napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, napi_value *args, Size count);
+// This function can mutate the array of arguments
+napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, Span<napi_value> args, void *native);
 
 bool InitAsyncBroker(InstanceData *instance);
 
