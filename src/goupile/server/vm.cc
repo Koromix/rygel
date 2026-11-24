@@ -515,7 +515,7 @@ static bool ServeRequests()
 
     while (!DetectInterrupt()) {
         uint8_t kind = 0;
-        uint8_t control[256];
+        alignas(struct cmsghdr) uint8_t control[256];
 
         struct iovec iov = { &kind, 1 };
         struct msghdr msg = {
@@ -755,7 +755,7 @@ static bool SendRequest(RequestType type, Allocator *alloc,
     // Send request and connection to zygote
     {
         uint8_t kind = (uint8_t)type;
-        uint8_t control[CMSG_SPACE(K_SIZE(int))] = {};
+        alignas(struct cmsghdr) uint8_t control[CMSG_SPACE(K_SIZE(int))] = {};
 
         struct iovec iov = { &kind, 1 };
         struct msghdr msg = {
