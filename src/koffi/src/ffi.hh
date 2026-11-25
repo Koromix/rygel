@@ -391,6 +391,19 @@ struct SharedData {
 };
 static_assert(MaxTrampolines <= INT16_MAX);
 
+enum class CallMode {
+    Compat,
+    Sequential,
+    Node24,
+    Node26
+};
+static const char *const CallModeNames[] = {
+    "Compat",
+    "Sequential",
+    "Node24",
+    "Node26",
+};
+
 extern const napi_type_tag LibraryHandleMarker;
 extern const napi_type_tag TypeObjectMarker;
 extern const napi_type_tag DirectionMarker;
@@ -398,6 +411,7 @@ extern const napi_type_tag UnionValueMarker;
 extern const napi_type_tag CastMarker;
 
 extern SharedData shared;
+extern CallMode sync_mode;
 
 // Some Node-API functions are loaded dynamically to work around bugs or because they are recent
 extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);

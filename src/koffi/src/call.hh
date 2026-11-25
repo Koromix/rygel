@@ -75,8 +75,9 @@ struct alignas(8) CallData {
         : env(env), instance(instance), stack(mem->stack), heap(mem->heap), transient(transient) {}
 #endif
 
-    INLINE_UNITY napi_value RunNormal(const FunctionInfo *func, napi_value *args, const OpData *first);
-    INLINE_UNITY napi_value RunExtended(const FunctionInfo *func, napi_value *args, const OpData *first); // Might not exist
+    INLINE_UNITY napi_value RunNormal(const FunctionInfo *func, uintptr_t *argp, const OpData *first);
+    INLINE_UNITY napi_value RunExtended(const FunctionInfo *func, uintptr_t *argp, const OpData *first); // Might not exist
+    INLINE_UNITY napi_value RunCompat(const FunctionInfo *func, uintptr_t *argp, const OpData *first);
 
     bool PrepareAsync(const FunctionInfo *func, napi_value *args);
     void ExecuteAsync();
@@ -198,7 +199,7 @@ public:
     bool IsReady() const { return call.instance; }
     bool IsResident() const { return resident; }
 
-    void Queue(const FunctionInfo *func, napi_value *args);
+    void Queue(const FunctionInfo *func, napi_value *args, napi_value callback);
 
 private:
     void Execute();
@@ -211,7 +212,7 @@ private:
     static void HandleComplete(napi_env env, napi_status status, void *udata);
 };
 
-void InitTranslateZeroCall(Napi::Env env);
+CallMode DetectCallMode(Napi::Env env);
 
 napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func);
 napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func);

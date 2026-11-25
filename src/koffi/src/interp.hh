@@ -23,8 +23,6 @@ namespace K {
     #endif
 
     #define NO_STACK_PROTECTOR __attribute__((no_stack_protector))
-#else
-    #define NO_STACK_PROTECTOR
 #endif
 
 struct InstanceData;
@@ -33,6 +31,7 @@ struct TypeInfo;
 struct ParameterInfo;
 struct CallData;
 struct TrampolineInfo;
+enum class CallMode;
 
 struct OpData {
     void *o;
@@ -76,42 +75,45 @@ void *Code2Op(Opcode code);
 uint32_t PackType(InstanceData *instance, const ParameterInfo &param);
 uint32_t PackType(InstanceData *instance, const TypeInfo *type, int directions = 0);
 
-bool PreparePlan(InstanceData *instance, FunctionInfo *func);
+bool PreparePlan(InstanceData *instance, FunctionInfo *func, CallMode mode);
 
 #if defined(MUST_TAIL)
 
-typedef napi_value ForwardFuncNormal(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
-typedef int RelayFuncNormal(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
+typedef napi_value ForwardFuncNormal(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op);
+typedef napi_value ForwardFuncCompat(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op);
+typedef int RelayFunc(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
 
-static K_FORCE_INLINE napi_value RunForwardNormal(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
+static K_FORCE_INLINE napi_value RunForwardNormal(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op)
 {
     return ((ForwardFuncNormal *)op->o)(call, base, argp, op);
 }
-static K_FORCE_INLINE int RunRelayNormal(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
+static K_FORCE_INLINE napi_value RunForwardCompat(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op)
 {
-    return ((RelayFuncNormal *)op->o)(call, base, argp, op);
+    return ((ForwardFuncCompat *)op->o)(call, base, argp, op);
+}
+
+static K_FORCE_INLINE int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
+{
+    return ((RelayFunc *)op->o)(call, base, argp, op);
 }
 
 #if defined(EXTENDED_CALL_THRESHOLD)
 
-PRESERVE_NONE typedef napi_value ForwardFuncExtended(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
-PRESERVE_NONE typedef int RelayFuncExtended(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
+PRESERVE_NONE typedef napi_value ForwardFuncExtended(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op);
 
-static K_FORCE_INLINE napi_value RunForwardExtended(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
+static K_FORCE_INLINE napi_value RunForwardExtended(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op)
 {
     return ((ForwardFuncExtended *)op->o)(call, base, argp, op);
-}
-static K_FORCE_INLINE int RunRelayExtended(CallData *call, uint8_t *base, napi_value *argp, const OpData *op)
-{
-    return ((RelayFuncExtended *)op->o)(call, base, argp, op);
 }
 
 #endif
 
 #else
 
-napi_value RunForwardNormal(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
-int RunRelayNormal(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
+napi_value RunForwardNormal(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op);
+napi_value RunForwardCompat(CallData *call, uint8_t *base, uintptr_t *argp, const OpData *op);
+
+int RunRelay(CallData *call, uint8_t *base, napi_value *argp, const OpData *op);
 
 #endif
 

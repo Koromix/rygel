@@ -42,6 +42,7 @@ const napi_type_tag UnionValueMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
 SharedData shared;
+CallMode sync_mode = CallMode::Compat;
 
 // Some Node-API functions are loaded dynamically to work around bugs or because they are recent
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);
@@ -185,6 +186,7 @@ static napi_value GetStats(napi_env env, napi_callback_info info)
     obj.Set("types", instance->types.Count());
     obj.Set("disposed", instance->stats.disposed);
     obj.Set("callbacks", callbacks);
+    obj.Set("mode", CallModeNames[(int)sync_mode]);
 
     return obj;
 }
@@ -1233,7 +1235,7 @@ static Napi::Value CreateFunctionType(const Napi::CallbackInfo &info)
         func->name = Fmt(&instance->str_alloc, "<anonymous_%1>", instance->types.Count()).ptr;
     }
 
-    if (!func->variadic && !PreparePlan(instance, func))
+    if (!func->variadic && !PreparePlan(instance, func, sync_mode))
         return env.Null();
 
     // We cannot fail after this check
@@ -1678,7 +1680,7 @@ Napi::Value LibraryHandle::Func(const Napi::CallbackInfo &info)
         func->convention = CallConvention::Cdecl;
     }
 
-    if (!func->variadic && !PreparePlan(instance, func))
+    if (!func->variadic && !PreparePlan(instance, func, sync_mode))
         return env.Null();
 
 #if defined(_WIN32)
@@ -2757,7 +2759,8 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
         static std::once_flag flag;
 
         std::call_once(flag, [&]() {
-            InitTranslateZeroCall(env);
+            sync_mode = DetectCallMode(env);
+            LogDebug("Selected sync call mode: %1", CallModeNames[(int)sync_mode]);
 
 #if defined(_WIN32)
             HMODULE h = GetModuleHandle(nullptr);

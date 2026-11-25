@@ -119,28 +119,37 @@ static K_FORCE_INLINE int GetTypeDirections(uint32_t packed) { return (packed >>
 static K_FORCE_INLINE bool IsTypeDisposable(uint32_t packed) {  return packed & (1u << 31); }
 
 #if defined(MUST_TAIL)
+    #define INTERP_SUFFIX Normal
+    #define INTERP_TAIL NO_STACK_PROTECTOR
+    #include "interp_fwd.inc.cc"
 
-#define RUN_TAIL
-#define RUN_ATTRIBUTES
-#define RUN_SUFFIX Normal
-#include "loop.cc"
+    #if defined(EXTENDED_CALL_THRESHOLD)
+        #define INTERP_SUFFIX Extended
+        #define INTERP_TAIL PRESERVE_NONE NO_STACK_PROTECTOR
+        #include "interp_fwd.inc.cc"
+    #endif
 
-#if defined(EXTENDED_CALL_THRESHOLD)
-    #define RUN_TAIL
-    #define RUN_ATTRIBUTES __attribute__((preserve_none))
-    #define RUN_SUFFIX Extended
-    #include "loop.cc"
-#endif
+    #define INTERP_SUFFIX Compat
+    #define INTERP_TAIL NO_STACK_PROTECTOR
+    #define INTERP_COMPAT
+    #include "interp_fwd.inc.cc"
 
+    #define INTERP_SUFFIX
+    #define INTERP_TAIL NO_STACK_PROTECTOR
+    #include "interp_relay.inc.cc"
 #else
+    #define INTERP_SUFFIX Normal
+    #include "interp_fwd.inc.cc"
 
-#define RUN_ATTRIBUTES
-#define RUN_SUFFIX Normal
-#include "loop.cc"
+    #define INTERP_SUFFIX Compat
+    #define INTERP_COMPAT
+    #include "interp_fwd.inc.cc"
 
+    #define INTERP_SUFFIX
+    #include "interp_relay.inc.cc"
 #endif
 
-bool PreparePlan(InstanceData *instance, FunctionInfo *func)
+bool PreparePlan(InstanceData *instance, FunctionInfo *func, CallMode mode)
 {
     K_ASSERT(!func->plan.sync.len);
     K_ASSERT(!func->plan.async.len);
@@ -420,10 +429,10 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 
 #if defined(MUST_TAIL)
         for (OpData &op: func->plan.async) {
-            op.o = (void *)ForwardDispatchNormal[(uintptr_t)op.o];
+            op.o = (void *)ForwardDispatchCompat[(uintptr_t)op.o];
         }
         for (OpData &op: func->plan.relay) {
-            op.o = (void *)RelayDispatchNormal[(uintptr_t)op.o];
+            op.o = (void *)RelayDispatch[(uintptr_t)op.o];
         }
 #endif
     }
@@ -467,19 +476,22 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func)
 #undef FUSE
     }
 
-#if defined(MUST_TAIL) && defined(EXTENDED_CALL_THRESHOLD)
-    if (func->parameters.len >= EXTENDED_CALL_THRESHOLD) {
+    // Convert opcodes to function pointers (if needed)
+#if defined(MUST_TAIL)
+    if (mode == CallMode::Compat) {
+        for (OpData &op: func->plan.sync) {
+            op.o = (void *)ForwardDispatchCompat[(uintptr_t)op.o];
+        }
+#if defined(EXTENDED_CALL_THRESHOLD)
+    } else if (func->parameters.len >= EXTENDED_CALL_THRESHOLD) {
         for (OpData &op: func->plan.sync) {
             op.o = (void *)ForwardDispatchExtended[(uintptr_t)op.o];
         }
+#endif
     } else {
         for (OpData &op: func->plan.sync) {
             op.o = (void *)ForwardDispatchNormal[(uintptr_t)op.o];
         }
-    }
-#elif defined(MUST_TAIL)
-    for (OpData &op: func->plan.sync) {
-        op.o = (void *)ForwardDispatchNormal[(uintptr_t)op.o];
     }
 #endif
 
