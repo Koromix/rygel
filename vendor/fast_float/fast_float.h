@@ -162,8 +162,8 @@
 #endif
 
 #define FASTFLOAT_VERSION_MAJOR 8
-#define FASTFLOAT_VERSION_MINOR 3
-#define FASTFLOAT_VERSION_PATCH 3
+#define FASTFLOAT_VERSION_MINOR 4
+#define FASTFLOAT_VERSION_PATCH 0
 
 #define FASTFLOAT_STRINGIZE_IMPL(x) #x
 #define FASTFLOAT_STRINGIZE(x) FASTFLOAT_STRINGIZE_IMPL(x)
@@ -371,6 +371,23 @@ using parse_options = parse_options_t<char>;
 #define fastfloat_never_inline __attribute__((noinline))
 #else
 #define fastfloat_never_inline
+#endif
+
+// C++26 (P2795R5) and -ftrivial-auto-var-init zero-fill local variables that
+// have no initializer. FASTFLOAT_INDETERMINATE opts a local out of that. Use
+// it only on buffers that the code writes before it reads them.
+#if defined(__has_cpp_attribute) && __cplusplus > 202302L
+#if __has_cpp_attribute(indeterminate)
+#define FASTFLOAT_INDETERMINATE [[indeterminate]]
+#endif
+#endif
+#if !defined(FASTFLOAT_INDETERMINATE) && defined(__has_attribute)
+#if __has_attribute(uninitialized)
+#define FASTFLOAT_INDETERMINATE __attribute__((uninitialized))
+#endif
+#endif
+#ifndef FASTFLOAT_INDETERMINATE
+#define FASTFLOAT_INDETERMINATE
 #endif
 
 // fastfloat_really_inline under clang only, a no-op elsewhere. Clang declines
@@ -3572,7 +3589,10 @@ template <uint16_t size> struct stackvec {
   // we never need more than 150 limbs
   uint16_t length{0};
 
-  stackvec() = default;
+  // user-provided, so that value-initialization (stackvec()) does not zero
+  // data: only the first length limbs are ever read.
+  FASTFLOAT_CONSTEXPR20 stackvec() noexcept {}
+
   stackvec(stackvec const &) = delete;
   stackvec &operator=(stackvec const &) = delete;
   stackvec(stackvec &&) = delete;
@@ -3869,7 +3889,7 @@ large_add_from(stackvec<size> &x, limb_span y) noexcept {
 template <uint16_t size>
 FASTFLOAT_CONSTEXPR20 bool long_mul(stackvec<size> &x, limb_span y) noexcept {
   limb_span xs = limb_span(x.data, x.len());
-  stackvec<size> z(xs);
+  FASTFLOAT_INDETERMINATE stackvec<size> z(xs);
   limb_span zs = limb_span(z.data, z.len());
 
   if (y.len() != 0) {
@@ -3877,7 +3897,7 @@ FASTFLOAT_CONSTEXPR20 bool long_mul(stackvec<size> &x, limb_span y) noexcept {
     FASTFLOAT_TRY(small_mul(x, y0));
     for (size_t index = 1; index < y.len(); index++) {
       limb yi = y[index];
-      stackvec<size> zi;
+      FASTFLOAT_INDETERMINATE stackvec<size> zi;
       if (yi != 0) {
         // re-use the same buffer throughout
         zi.set_len(0);
@@ -4541,7 +4561,7 @@ inline FASTFLOAT_CONSTEXPR20 adjusted_mantissa negative_digit_comp(
   T b;
   to_float(false, am_b, b);
   adjusted_mantissa theor = to_extended_halfway(b);
-  bigint theor_digits(theor.mantissa);
+  FASTFLOAT_INDETERMINATE bigint theor_digits(theor.mantissa);
   int32_t theor_exp = theor.power2;
 
   // scale real digits and theor digits to be same power.
@@ -4600,7 +4620,7 @@ digit_comp(parsed_number_string_t<UC> &num, adjusted_mantissa am) noexcept {
       scientific_exponent(num.mantissa, static_cast<int32_t>(num.exponent));
   size_t max_digits = binary_format<T>::max_digits();
   size_t digits = 0;
-  bigint bigmant;
+  FASTFLOAT_INDETERMINATE bigint bigmant;
   parse_mantissa(bigmant, num, max_digits, digits);
   // can't underflow, since digits is at most max_digits.
   int32_t exponent = sci_exp + 1 - int32_t(digits);
@@ -4687,12 +4707,20 @@ from_chars_result_t<UC>
  * Returns true if the floating-pointing rounding mode is to 'nearest'.
  * It is the default on most system. This function is meant to be inexpensive.
  * Credit : @mwalcott3
+ *
+ * If FASTFLOAT_ROUNDS_TO_NEAREST is defined, we trust the user that the
+ * rounding mode is always 'nearest' and we skip the check (see README).
  */
 fastfloat_really_inline bool rounds_to_nearest() noexcept {
   // https://lemire.me/blog/2020/06/26/gcc-not-nearest/
 #if (FLT_EVAL_METHOD != 1) && (FLT_EVAL_METHOD != 0)
+  // The arithmetic may be carried out with excess precision (e.g., x87):
+  // Clinger's fast path could then round twice. FASTFLOAT_ROUNDS_TO_NEAREST
+  // does not change this.
   return false;
-#endif
+#elif defined(FASTFLOAT_ROUNDS_TO_NEAREST)
+  return true;
+#else
   // See
   // A fast function to check your floating-point rounding mode
   // https://lemire.me/blog/2022/11/16/a-fast-function-to-check-your-floating-point-rounding-mode/
@@ -4746,6 +4774,7 @@ fastfloat_really_inline bool rounds_to_nearest() noexcept {
 #elif defined(__GNUC__)
 #pragma GCC diagnostic pop
 #endif
+#endif // FASTFLOAT_ROUNDS_TO_NEAREST
 }
 
 } // namespace detail
