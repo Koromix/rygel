@@ -141,6 +141,12 @@ To do so, change the settings in the `[Customize]` section of the INI config fil
 # Show contact mail in main footer
 # Contact =
 
+# Display various URLs in footer, use empty value to hide
+# Project = https://redropp.org
+# Imprint =
+# Privacy =
+# Terms =
+
 # Replace the favicon with another image (PNG or WEBP)
 # IconFile =
 

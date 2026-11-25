@@ -66,6 +66,12 @@
         "incomplete": "Incomplete",
         "keep_tab_open_during_download": "Keep this tab open until download is complete!",
         "language": "Language",
+        "link_types": {
+            "imprint": "Legal notice",
+            "privacy": "Privacy Policy",
+            "project": "Project website",
+            "terms": "Terms of Service"
+        },
         "links_can_be_recovered_on_upload_machine": "Links can only be recovered on the machine that was used to upload the file",
         "list_of_external_identities": "This is a list of authorized identity providers you can use to sign in.",
         "login": "Sign in",
@@ -97,7 +103,6 @@
         "password_reset_successful": "Your password has been changed, please login to continue.",
         "password_suffix": "PASSWORD",
         "pending": "Pending",
-        "project_website": "Project website",
         "protected": "Protected",
         "provider": "Provider",
         "published": "Published",

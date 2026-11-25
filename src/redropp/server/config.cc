@@ -204,7 +204,15 @@ bool LoadConfig(StreamReader *st, Config *out_config)
                 }
             } else if (prop.section == "Customize") {
                 if (prop.key == "Contact") {
-                    config.contact = DuplicateString(prop.value, &config.str_alloc).ptr;
+                    config.contact = prop.value.len ? DuplicateString(prop.value, &config.str_alloc).ptr : nullptr;
+                } else if (prop.key == "Project") {
+                    config.project = prop.value.len ? DuplicateString(prop.value, &config.str_alloc).ptr : nullptr;
+                } else if (prop.key == "Privacy") {
+                    config.privacy = prop.value.len ? DuplicateString(prop.value, &config.str_alloc).ptr : nullptr;
+                } else if (prop.key == "Imprint") {
+                    config.imprint = prop.value.len ? DuplicateString(prop.value, &config.str_alloc).ptr : nullptr;
+                } else if (prop.key == "Terms") {
+                    config.terms = prop.value.len ? DuplicateString(prop.value, &config.str_alloc).ptr : nullptr;
                 } else if (prop.key == "IconFile") {
                     config.custom_icon = NormalizePath(prop.value, root_directory, &config.str_alloc).ptr;
                 } else if (prop.key == "LogoFile") {

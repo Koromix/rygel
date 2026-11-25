@@ -66,6 +66,12 @@
         "incomplete": "Incomplet",
         "keep_tab_open_during_download": "Gardez cet onglet ouvert pendant le téléchargement !",
         "language": "Langage",
+        "link_types": {
+            "imprint": "Mentions légales",
+            "privacy": "Charte de confidentialité",
+            "project": "Site du projet",
+            "terms": "Conditions d'utilisation"
+        },
         "links_can_be_recovered_on_upload_machine": "Les liens ne peuvent être récupérés que sur l'ordinateur qui a servi à mettre le fichier en ligne",
         "list_of_external_identities": "Voici la liste des fournisseurs d'identité autorisés que vous pouvez utiliser pour vous connecter.",
         "login": "Se connecter",
@@ -97,7 +103,6 @@
         "password_reset_successful": "Votre mot de passe a été modifié, veuillez vous connecter pour continuer.",
         "password_suffix": "MOT_DE_PASSE",
         "pending": "En attente",
-        "project_website": "Site du projet",
         "protected": "Protégé",
         "provider": "Fournisseur",
         "published": "Publié",

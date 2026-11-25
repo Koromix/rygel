@@ -346,7 +346,6 @@ static AssetInfo PatchAsset(AssetInfo asset, Span<const char> nonce, Allocator *
             json.Key("title"); json.String(config.title);
             json.Key("url"); json.String(config.url);
             json.Key("logo"); json.StringOrNull(asset_logo);
-            json.Key("contact"); json.StringOrNull(config.contact);
 
             json.Key("durations"); json.StartArray();
             for (int64_t duration: config.durations) {
@@ -370,6 +369,22 @@ static AssetInfo PatchAsset(AssetInfo asset, Span<const char> nonce, Allocator *
                 json.EndObject();
             }
             json.EndArray();
+            json.EndObject();
+
+            json.Key("contact"); json.StringOrNull(config.contact);
+            json.Key("links"); json.StartObject();
+            if (config.project) {
+                json.Key("project"); json.String(config.project);
+            }
+            if (config.privacy) {
+                json.Key("privacy"); json.String(config.privacy);
+            }
+            if (config.imprint) {
+                json.Key("imprint"); json.String(config.imprint);
+            }
+            if (config.terms) {
+                json.Key("terms"); json.String(config.terms);
+            }
             json.EndObject();
 
             json.EndObject();

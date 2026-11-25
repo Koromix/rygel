@@ -345,7 +345,11 @@ function renderApp(el) {
                 <div style="line-height: 1;">${ENV.title}</div>
                 ${ENV.contact != null ? html`<a href=${'mailto:' + ENV.contact} style="font-size: 0.8em; font-weight: bold; color: inherit;">${ENV.contact}</a>`: ''}
             </div>
-            <a href="https://redropp.org" target="_blank" role="button" class="small">${T.project_website}</a>
+            ${!Util.isObjectEmpty(ENV.links) ? html`
+                <div>
+                    ${Object.keys(ENV.links).map(type => html` <a href=${ENV.links[type]} target="_blank" role="button" class="small">${T.link_types[type]}</a>`)}
+                </div>
+            ` : ''}
         </footer>
     `, root_el);
 }

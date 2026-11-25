@@ -31,6 +31,11 @@ struct Config {
     int64_t edit_window = 15 * 60000; // 15 minutes
 
     const char *contact = nullptr;
+    const char *project = "https://redropp.org";
+    const char *privacy = nullptr;
+    const char *imprint = nullptr;
+    const char *terms = nullptr;
+
     const char *custom_icon = nullptr;
     const char *custom_logo = nullptr;
     HeapArray<const char *> custom_styles;
