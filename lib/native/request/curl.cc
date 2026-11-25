@@ -48,6 +48,7 @@ bool curl_Reset(CURL *curl)
         success &= !curl_easy_setopt(curl, CURLOPT_CAINFO_BLOB, &blob);
     }
 
+    success &= !curl_easy_setopt(curl, CURLOPT_DNS_CACHE_TIMEOUT, 300L);
     success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYPEER, 1L);
     success &= !curl_easy_setopt(curl, CURLOPT_SSL_VERIFYHOST, 2L);
     success &= !curl_easy_setopt(curl, CURLOPT_CONNECTTIMEOUT_MS, 10000L);
