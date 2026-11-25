@@ -901,20 +901,6 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                 ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
                                        SCMP_A1(SCMP_CMP_EQ, F_SETFD, 0),
                                        SCMP_A2(SCMP_CMP_EQ, FD_CLOEXEC, 0));
-            } else if (TestStr(filter.name, "write/std") ||
-                       TestStr(filter.name, "writev/std")) {
-                bool vector = StartsWith(filter.name, "writev/");
-                int syscall = seccomp_syscall_resolve_name(vector ? "writev" : "write");
-                K_ASSERT(syscall != __NR_SCMP_ERROR);
-
-                unsigned int fds[] = { STDOUT_FILENO, STDERR_FILENO };
-
-                for (unsigned int fd: fds) {
-                    ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
-                                           SCMP_A0(SCMP_CMP_EQ, fd, 0));
-                    if (ret < 0)
-                        break;
-                }
             } else if (EndsWith(filter.name, "/fd")) {
                 K_ASSERT(filter.fd >= 0);
 
@@ -1178,8 +1164,10 @@ static bool RunProxy(pid_t parent, int sock, Span<const char *const> paths)
             { "fstatat64", sb_FilterAction::Allow },
             { "statx", sb_FilterAction::Allow },
 
-            { "write/std", sb_FilterAction::Allow },
-            { "writev/std", sb_FilterAction::Allow }
+            { "write/fd", sb_FilterAction::Allow, STDOUT_FILENO },
+            { "write/fd", sb_FilterAction::Allow, STDERR_FILENO },
+            { "writev/fd", sb_FilterAction::Allow, STDOUT_FILENO },
+            { "writev/fd", sb_FilterAction::Allow, STDERR_FILENO }
         };
 
         if (!InitSeccomp(syscalls))
