@@ -142,7 +142,9 @@ check_PROGRAMS = miniseq$(EXEEXT) 01-sim-allow$(EXEEXT) \
 	56-basic-iterate_syscalls$(EXEEXT) 57-basic-rawsysrc$(EXEEXT) \
 	58-live-tsync_notify$(EXEEXT) \
 	59-basic-empty_binary_tree$(EXEEXT) 60-sim-precompute$(EXEEXT) \
-	61-sim-transactions$(EXEEXT) 62-sim-arch_transactions$(EXEEXT)
+	61-sim-transactions$(EXEEXT) 62-sim-arch_transactions$(EXEEXT) \
+	65-sim-db_tree_args$(EXEEXT) 66-sim-acc_reload$(EXEEXT) \
+	67-sim-arch_syscall_load$(EXEEXT)
 EXTRA_PROGRAMS = 00-test$(EXEEXT)
 subdir = tests
 ACLOCAL_M4 = $(top_srcdir)/aclocal.m4
@@ -493,6 +495,21 @@ am__DEPENDENCIES_1 =
 62_sim_arch_transactions_LDADD = $(LDADD)
 62_sim_arch_transactions_DEPENDENCIES = util.la ../src/libseccomp.la \
 	$(am__DEPENDENCIES_1)
+65_sim_db_tree_args_SOURCES = 65-sim-db_tree_args.c
+65_sim_db_tree_args_OBJECTS = 65-sim-db_tree_args.$(OBJEXT)
+65_sim_db_tree_args_LDADD = $(LDADD)
+65_sim_db_tree_args_DEPENDENCIES = util.la ../src/libseccomp.la \
+	$(am__DEPENDENCIES_1)
+66_sim_acc_reload_SOURCES = 66-sim-acc_reload.c
+66_sim_acc_reload_OBJECTS = 66-sim-acc_reload.$(OBJEXT)
+66_sim_acc_reload_LDADD = $(LDADD)
+66_sim_acc_reload_DEPENDENCIES = util.la ../src/libseccomp.la \
+	$(am__DEPENDENCIES_1)
+67_sim_arch_syscall_load_SOURCES = 67-sim-arch_syscall_load.c
+67_sim_arch_syscall_load_OBJECTS = 67-sim-arch_syscall_load.$(OBJEXT)
+67_sim_arch_syscall_load_LDADD = $(LDADD)
+67_sim_arch_syscall_load_DEPENDENCIES = util.la ../src/libseccomp.la \
+	$(am__DEPENDENCIES_1)
 miniseq_SOURCES = miniseq.c
 miniseq_OBJECTS = miniseq.$(OBJEXT)
 miniseq_DEPENDENCIES =
@@ -567,7 +584,10 @@ am__depfiles_remade = ./$(DEPDIR)/00-test.Po \
 	./$(DEPDIR)/59-basic-empty_binary_tree.Po \
 	./$(DEPDIR)/60-sim-precompute.Po \
 	./$(DEPDIR)/61-sim-transactions.Po \
-	./$(DEPDIR)/62-sim-arch_transactions.Po ./$(DEPDIR)/miniseq.Po \
+	./$(DEPDIR)/62-sim-arch_transactions.Po \
+	./$(DEPDIR)/65-sim-db_tree_args.Po \
+	./$(DEPDIR)/66-sim-acc_reload.Po \
+	./$(DEPDIR)/67-sim-arch_syscall_load.Po ./$(DEPDIR)/miniseq.Po \
 	./$(DEPDIR)/util.Plo
 am__mv = mv -f
 COMPILE = $(CC) $(DEFS) $(DEFAULT_INCLUDES) $(INCLUDES) $(AM_CPPFLAGS) \
@@ -617,7 +637,9 @@ SOURCES = $(util_la_SOURCES) $(nodist_00_test_SOURCES) 01-sim-allow.c \
 	55-basic-pfc_binary_tree.c 56-basic-iterate_syscalls.c \
 	57-basic-rawsysrc.c 58-live-tsync_notify.c \
 	59-basic-empty_binary_tree.c 60-sim-precompute.c \
-	61-sim-transactions.c 62-sim-arch_transactions.c miniseq.c
+	61-sim-transactions.c 62-sim-arch_transactions.c \
+	65-sim-db_tree_args.c 66-sim-acc_reload.c \
+	67-sim-arch_syscall_load.c miniseq.c
 DIST_SOURCES = $(util_la_SOURCES) 01-sim-allow.c 02-sim-basic.c \
 	03-sim-basic_chains.c 04-sim-multilevel_chains.c \
 	05-sim-long_jumps.c 06-sim-actions.c 07-sim-db_bug_looping.c \
@@ -646,7 +668,9 @@ DIST_SOURCES = $(util_la_SOURCES) 01-sim-allow.c 02-sim-basic.c \
 	55-basic-pfc_binary_tree.c 56-basic-iterate_syscalls.c \
 	57-basic-rawsysrc.c 58-live-tsync_notify.c \
 	59-basic-empty_binary_tree.c 60-sim-precompute.c \
-	61-sim-transactions.c 62-sim-arch_transactions.c miniseq.c
+	61-sim-transactions.c 62-sim-arch_transactions.c \
+	65-sim-db_tree_args.c 66-sim-acc_reload.c \
+	67-sim-arch_syscall_load.c miniseq.c
 am__can_run_installinfo = \
   case $$AM_UPDATE_INFO_DIR in \
     n|no|NO) false;; \
@@ -909,7 +933,10 @@ EXTRA_DIST_TESTPYTHON = \
 	59-basic-empty_binary_tree.py \
 	60-sim-precompute.py \
 	61-sim-transactions.py \
-	62-sim-arch_transactions.py
+	62-sim-arch_transactions.py \
+	65-sim-db_tree_args.py \
+	66-sim-acc_reload.py \
+	67-sim-arch_syscall_load.py
 
 EXTRA_DIST_TESTCFGS = \
 	01-sim-allow.tests \
@@ -973,7 +1000,10 @@ EXTRA_DIST_TESTCFGS = \
 	59-basic-empty_binary_tree.tests \
 	60-sim-precompute.tests \
 	61-sim-transactions.tests \
-	62-sim-arch_transactions.tests
+	62-sim-arch_transactions.tests \
+	65-sim-db_tree_args.tests \
+	66-sim-acc_reload.tests \
+	67-sim-arch_syscall_load.tests
 
 EXTRA_DIST_TESTSCRIPTS = \
 	38-basic-pfc_coverage.sh 38-basic-pfc_coverage.pfc \
@@ -1298,6 +1328,18 @@ util.la: $(util_la_OBJECTS) $(util_la_DEPENDENCIES) $(EXTRA_util_la_DEPENDENCIES
 	@rm -f 62-sim-arch_transactions$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(62_sim_arch_transactions_OBJECTS) $(62_sim_arch_transactions_LDADD) $(LIBS)
 
+65-sim-db_tree_args$(EXEEXT): $(65_sim_db_tree_args_OBJECTS) $(65_sim_db_tree_args_DEPENDENCIES) $(EXTRA_65_sim_db_tree_args_DEPENDENCIES) 
+	@rm -f 65-sim-db_tree_args$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(65_sim_db_tree_args_OBJECTS) $(65_sim_db_tree_args_LDADD) $(LIBS)
+
+66-sim-acc_reload$(EXEEXT): $(66_sim_acc_reload_OBJECTS) $(66_sim_acc_reload_DEPENDENCIES) $(EXTRA_66_sim_acc_reload_DEPENDENCIES) 
+	@rm -f 66-sim-acc_reload$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(66_sim_acc_reload_OBJECTS) $(66_sim_acc_reload_LDADD) $(LIBS)
+
+67-sim-arch_syscall_load$(EXEEXT): $(67_sim_arch_syscall_load_OBJECTS) $(67_sim_arch_syscall_load_DEPENDENCIES) $(EXTRA_67_sim_arch_syscall_load_DEPENDENCIES) 
+	@rm -f 67-sim-arch_syscall_load$(EXEEXT)
+	$(AM_V_CCLD)$(LINK) $(67_sim_arch_syscall_load_OBJECTS) $(67_sim_arch_syscall_load_LDADD) $(LIBS)
+
 miniseq$(EXEEXT): $(miniseq_OBJECTS) $(miniseq_DEPENDENCIES) $(EXTRA_miniseq_DEPENDENCIES) 
 	@rm -f miniseq$(EXEEXT)
 	$(AM_V_CCLD)$(LINK) $(miniseq_OBJECTS) $(miniseq_LDADD) $(LIBS)
@@ -1371,6 +1413,9 @@ distclean-compile:
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/60-sim-precompute.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/61-sim-transactions.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/62-sim-arch_transactions.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/65-sim-db_tree_args.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/66-sim-acc_reload.Po@am__quote@ # am--include-marker
+@AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/67-sim-arch_syscall_load.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/miniseq.Po@am__quote@ # am--include-marker
 @AMDEP_TRUE@@am__include@ @am__quote@./$(DEPDIR)/util.Plo@am__quote@ # am--include-marker
 
@@ -1692,6 +1737,9 @@ distclean: distclean-am
 	-rm -f ./$(DEPDIR)/60-sim-precompute.Po
 	-rm -f ./$(DEPDIR)/61-sim-transactions.Po
 	-rm -f ./$(DEPDIR)/62-sim-arch_transactions.Po
+	-rm -f ./$(DEPDIR)/65-sim-db_tree_args.Po
+	-rm -f ./$(DEPDIR)/66-sim-acc_reload.Po
+	-rm -f ./$(DEPDIR)/67-sim-arch_syscall_load.Po
 	-rm -f ./$(DEPDIR)/miniseq.Po
 	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f Makefile
@@ -1802,6 +1850,9 @@ maintainer-clean: maintainer-clean-am
 	-rm -f ./$(DEPDIR)/60-sim-precompute.Po
 	-rm -f ./$(DEPDIR)/61-sim-transactions.Po
 	-rm -f ./$(DEPDIR)/62-sim-arch_transactions.Po
+	-rm -f ./$(DEPDIR)/65-sim-db_tree_args.Po
+	-rm -f ./$(DEPDIR)/66-sim-acc_reload.Po
+	-rm -f ./$(DEPDIR)/67-sim-arch_syscall_load.Po
 	-rm -f ./$(DEPDIR)/miniseq.Po
 	-rm -f ./$(DEPDIR)/util.Plo
 	-rm -f Makefile
