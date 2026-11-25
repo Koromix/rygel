@@ -2,6 +2,14 @@
 
 ## Alpha versions
 
+### Redropp 0.10.2
+
+*Released on 2026-11-25*
+
+- Support adding privacy/terms/imprint buttons to Redropp footer
+- Support changing or removing project URL in Redropp footer
+- Fix DNS resolving error after `/etc/resolv.conf` gets replaced when using `--sandbox`
+
 ### Redropp 0.10.1
 
 *Released on 2026-11-18*
