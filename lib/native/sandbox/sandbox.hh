@@ -36,6 +36,7 @@ enum class sb_FilterAction {
 struct sb_SyscallFilter {
     const char *name;
     sb_FilterAction action;
+    int fd = -1; // for use with /fd names
 };
 
 class sb_SandboxBuilder {

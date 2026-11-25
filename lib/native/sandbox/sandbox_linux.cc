@@ -901,6 +901,51 @@ static bool InitSeccomp(Span<const sb_SyscallFilter> filters)
                 ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 2,
                                        SCMP_A1(SCMP_CMP_EQ, F_SETFD, 0),
                                        SCMP_A2(SCMP_CMP_EQ, FD_CLOEXEC, 0));
+            } else if (TestStr(filter.name, "write/std") ||
+                       TestStr(filter.name, "writev/std")) {
+                bool vector = StartsWith(filter.name, "writev/");
+                int syscall = seccomp_syscall_resolve_name(vector ? "writev" : "write");
+                K_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                unsigned int fds[] = { STDOUT_FILENO, STDERR_FILENO };
+
+                for (unsigned int fd: fds) {
+                    ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
+                                           SCMP_A0(SCMP_CMP_EQ, fd, 0));
+                    if (ret < 0)
+                        break;
+                }
+            } else if (EndsWith(filter.name, "/fd")) {
+                K_ASSERT(filter.fd >= 0);
+
+                static const char *const SupportedNames[] = {
+                    "read", "readv",
+                    "write", "writev",
+                    "pread64", "preadv", "preadv2",
+                    "pwrite64", "pwritev", "pwritev2",
+                    "send", "sendto", "sendmsg", "sendmmsg",
+                    "recv", "recvfrom", "recvmsg", "recvmmsg", "recvmmsg_time64",
+                    "fstat", "fstat64",
+                    "lseek", "_llseek",
+                    "fcntl", "fcntl64", "ioctl",
+                    "getsockname", "getpeername",
+                    "getsockopt", "setsockopt"
+                };
+
+                Span<const char> prefix = SplitStr(filter.name, '/');
+                const char *const *ptr = std::find_if(std::begin(SupportedNames), std::end(SupportedNames),
+                                                      [&](const char *name) { return prefix == name; });
+
+                if (ptr == std::end(SupportedNames)) {
+                    LogError("Syscall '%1' does not support fd-specific filtering", prefix);
+                    return false;
+                }
+
+                int syscall = seccomp_syscall_resolve_name(*ptr);
+                K_ASSERT(syscall != __NR_SCMP_ERROR);
+
+                ret = seccomp_rule_add(ctx, translate_action(filter.action), syscall, 1,
+                                       SCMP_A0(SCMP_CMP_EQ, (unsigned int)filter.fd, 0));
             } else {
                 int syscall = seccomp_syscall_resolve_name(filter.name);
 
@@ -1122,20 +1167,19 @@ static bool RunProxy(pid_t parent, int sock, Span<const char *const> paths)
             { "fcntl/cloexec", sb_FilterAction::Allow },
             { "fcntl64/cloexec", sb_FilterAction::Allow },
             { "close", sb_FilterAction::Allow },
-            { "recv", sb_FilterAction::Allow },
-            { "recvfrom", sb_FilterAction::Allow },
-            { "send", sb_FilterAction::Allow },
-            { "sendmsg", sb_FilterAction::Allow },
-            { "sendto", sb_FilterAction::Allow },
+            { "recv/fd", sb_FilterAction::Allow, sock },
+            { "recvfrom/fd", sb_FilterAction::Allow, sock },
+            { "send/fd", sb_FilterAction::Allow, sock },
+            { "sendmsg/fd", sb_FilterAction::Allow, sock },
+            { "sendto/fd", sb_FilterAction::Allow, sock },
             { "fstat", sb_FilterAction::Allow },
             { "fstat64", sb_FilterAction::Allow },
             { "newfstatat", sb_FilterAction::Allow },
             { "fstatat64", sb_FilterAction::Allow },
             { "statx", sb_FilterAction::Allow },
 
-            // Don't let log statements crash process
-            { "write", sb_FilterAction::Block },
-            { "writev", sb_FilterAction::Block }
+            { "write/std", sb_FilterAction::Allow },
+            { "writev/std", sb_FilterAction::Allow }
         };
 
         if (!InitSeccomp(syscalls))
@@ -1165,7 +1209,7 @@ static bool RunProxy(pid_t parent, int sock, Span<const char *const> paths)
         }
         req.path[K_SIZE(req.path) - 1] = 0;
 
-        int response = 0;
+        int response = EIO;
         int fd = -1;
         K_DEFER { close(fd); };
 
@@ -1174,8 +1218,20 @@ static bool RunProxy(pid_t parent, int sock, Span<const char *const> paths)
             bool allowed = set.Find(req.path);
 
             if (allowed && ValidateOpenFlags(req.flags)) {
-                fd = open(req.path, req.flags | O_CLOEXEC | O_NOCTTY);
-                response = (fd >= 0) ? 0 : errno;
+                fd = open(req.path, req.flags | O_CLOEXEC | O_NOCTTY | O_NONBLOCK);
+
+                if (fd >= 0) {
+                    struct stat sb;
+                    if (fstat(fd, &sb) < 0) {
+                        response = errno;
+                    } else if (!S_ISREG(sb.st_mode)) {
+                        response = EACCES;
+                    } else {
+                        response = 0;
+                    }
+                } else {
+                    response = errno;
+                }
             } else {
                 response = EACCES;
             }
@@ -1196,7 +1252,9 @@ static bool RunProxy(pid_t parent, int sock, Span<const char *const> paths)
                 .msg_flags = 0
             };
 
-            if (fd >= 0) {
+            if (!response) {
+                K_ASSERT(fd >= 0);
+
                 msg.msg_control = control;
                 msg.msg_controllen = K_SIZE(control);
 
