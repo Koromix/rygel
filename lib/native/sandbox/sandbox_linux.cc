@@ -998,96 +998,6 @@ bool sb_SandboxBuilder::Apply()
     return true;
 }
 
-int sb_OpenProxyFile(const char *path, int flags)
-{
-    if (proxy_sock < 0) {
-        errno = ENOTCONN;
-        return -1;
-    }
-    if (!path) {
-        errno = EINVAL;
-        return -1;
-    }
-
-    std::lock_guard<std::mutex> lock(proxy_lock);
-
-    int response = EIO;
-    int fd = -1;
-
-    K_DEFER_N(err_guard) {
-        K_DEFER_C(err = errno) { errno = err; };
-        close(fd);
-    };
-
-    // Send message
-    {
-        ProxyRequest req = {};
-
-        req.flags = flags;
-        CopyString(path, req.path);
-
-        if (K_RESTART_EINTR(send(proxy_sock, &req, K_SIZE(req), MSG_NOSIGNAL), < 0) < 0)
-            goto broken;
-    }
-
-    // Receive response and descriptor
-    {
-        alignas(struct cmsghdr) uint8_t control[256];
-
-        struct iovec iov = { &response, K_SIZE(response) };
-        struct msghdr msg = {
-            .msg_name = nullptr,
-            .msg_namelen = 0,
-            .msg_iov = &iov,
-            .msg_iovlen = 1,
-            .msg_control = control,
-            .msg_controllen = K_SIZE(control),
-            .msg_flags = 0
-        };
-
-        Size read = K_RESTART_EINTR(recvmsg(proxy_sock, &msg, MSG_TRUNC | MSG_CMSG_CLOEXEC), < 0);
-        if (read < 0)
-            goto broken;
-        struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
-
-        if (cmsg) {
-            if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS ||
-                                                  cmsg->cmsg_len != CMSG_LEN(K_SIZE(int))) {
-                errno = EINVAL;
-                goto broken;
-            }
-
-            MemCpy(&fd, CMSG_DATA(cmsg), K_SIZE(int));
-        }
-
-        if (read != K_SIZE(response)) {
-            errno = EIO;
-            goto broken;
-        }
-
-        if (!response && !cmsg && (msg.msg_flags & MSG_CTRUNC)) {
-            errno = EMFILE;
-            return -1;
-        }
-    }
-
-    if (response > 0 && fd < 0) {
-        errno = response;
-        return -1;
-    }
-    if (response || fd < 0) {
-        errno = EIO;
-        goto broken;
-    }
-
-    err_guard.Disable();
-    return fd;
-
-broken:
-    LogError("Failed to send open request to proxy: %1", strerror(errno));
-    _exit(1);
-}
-
 static bool ValidateOpenFlags(int flags)
 {
     const int AllowedFlags = O_RDONLY | O_NONBLOCK | O_NOCTTY | O_NOFOLLOW;
@@ -1317,6 +1227,96 @@ bool sb_StartProxy(Span<const char *const> paths)
     } else {
         return false;
     }
+}
+
+int sb_OpenProxyFile(const char *path, int flags)
+{
+    if (proxy_sock < 0) {
+        errno = ENOTCONN;
+        return -1;
+    }
+    if (!path) {
+        errno = EINVAL;
+        return -1;
+    }
+
+    std::lock_guard<std::mutex> lock(proxy_lock);
+
+    int response = EIO;
+    int fd = -1;
+
+    K_DEFER_N(err_guard) {
+        K_DEFER_C(err = errno) { errno = err; };
+        close(fd);
+    };
+
+    // Send message
+    {
+        ProxyRequest req = {};
+
+        req.flags = flags;
+        CopyString(path, req.path);
+
+        if (K_RESTART_EINTR(send(proxy_sock, &req, K_SIZE(req), MSG_NOSIGNAL), < 0) < 0)
+            goto broken;
+    }
+
+    // Receive response and descriptor
+    {
+        alignas(struct cmsghdr) uint8_t control[256];
+
+        struct iovec iov = { &response, K_SIZE(response) };
+        struct msghdr msg = {
+            .msg_name = nullptr,
+            .msg_namelen = 0,
+            .msg_iov = &iov,
+            .msg_iovlen = 1,
+            .msg_control = control,
+            .msg_controllen = K_SIZE(control),
+            .msg_flags = 0
+        };
+
+        Size read = K_RESTART_EINTR(recvmsg(proxy_sock, &msg, MSG_TRUNC | MSG_CMSG_CLOEXEC), < 0);
+        if (read < 0)
+            goto broken;
+        struct cmsghdr *cmsg = CMSG_FIRSTHDR(&msg);
+
+        if (cmsg) {
+            if (cmsg->cmsg_level != SOL_SOCKET || cmsg->cmsg_type != SCM_RIGHTS ||
+                                                  cmsg->cmsg_len != CMSG_LEN(K_SIZE(int))) {
+                errno = EINVAL;
+                goto broken;
+            }
+
+            MemCpy(&fd, CMSG_DATA(cmsg), K_SIZE(int));
+        }
+
+        if (read != K_SIZE(response)) {
+            errno = EIO;
+            goto broken;
+        }
+
+        if (!response && !cmsg && (msg.msg_flags & MSG_CTRUNC)) {
+            errno = EMFILE;
+            return -1;
+        }
+    }
+
+    if (response > 0 && fd < 0) {
+        errno = response;
+        return -1;
+    }
+    if (response || fd < 0) {
+        errno = EIO;
+        goto broken;
+    }
+
+    err_guard.Disable();
+    return fd;
+
+broken:
+    LogError("Failed to send open request to proxy: %1", strerror(errno));
+    _exit(1);
 }
 
 FILE *sb_OpenProxyFile(const char *path, const char *mode)
