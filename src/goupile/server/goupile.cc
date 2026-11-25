@@ -76,6 +76,7 @@ static bool ApplySandbox(Span<const char *const> reveals)
         { "openat2", sb_FilterAction::Allow },
         { "close", sb_FilterAction::Allow },
         { "fcntl", sb_FilterAction::Allow },
+        { "fcntl64", sb_FilterAction::Allow },
         { "read", sb_FilterAction::Allow },
         { "readv", sb_FilterAction::Allow },
         { "write", sb_FilterAction::Allow },
