@@ -448,6 +448,8 @@ static K_FORCE_INLINE napi_value WrapPointer(Napi::Env env, void *ptr)
     return value;
 }
 
+bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
+
 void DumpMemory(const char *type, Span<const uint8_t> bytes);
 
 }

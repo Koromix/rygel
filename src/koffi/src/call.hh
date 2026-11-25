@@ -216,7 +216,6 @@ CallMode DetectCallMode(Napi::Env env);
 
 napi_value DescribeFunction(InstanceData *instance, const FunctionInfo *func);
 napi_value WrapFunction(InstanceData *instance, const FunctionInfo *func);
-bool DetectCallConvention(Span<const char> name, CallConvention *out_convention);
 
 // This function can mutate the array of arguments
 napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, Span<napi_value> args, void *native);
