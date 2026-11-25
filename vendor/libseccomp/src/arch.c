@@ -49,6 +49,7 @@
 #include "arch-s390x.h"
 #include "arch-sh.h"
 #include "db.h"
+#include "syscalls.h"
 #include "system.h"
 
 #define default_arg_offset(x)		(offsetof(struct seccomp_data, args[x]))
@@ -328,7 +329,8 @@ int arch_arg_offset(const struct arch_def *arch, unsigned int arg)
  */
 int arch_syscall_resolve_name(const struct arch_def *arch, const char *name)
 {
-	if (arch->syscall_resolve_name)
+	if (arch->syscall_resolve_name &&
+			arch->syscall_resolve_name != abi_syscall_resolve_name_munge)
 		return (*arch->syscall_resolve_name)(arch, name);
 	if (arch->syscall_resolve_name_raw)
 		return (*arch->syscall_resolve_name_raw)(name);
@@ -348,7 +350,8 @@ int arch_syscall_resolve_name(const struct arch_def *arch, const char *name)
  */
 const char *arch_syscall_resolve_num(const struct arch_def *arch, int num)
 {
-	if (arch->syscall_resolve_num)
+	if (arch->syscall_resolve_num &&
+			arch->syscall_resolve_num != abi_syscall_resolve_num_munge)
 		return (*arch->syscall_resolve_num)(arch, num);
 	if (arch->syscall_resolve_num_raw)
 		return (*arch->syscall_resolve_num_raw)(num);
@@ -411,10 +414,12 @@ int arch_syscall_rewrite(const struct arch_def *arch, int *syscall)
 	} else if (sys > -100) {
 		/* -2 to -99 are reserved values */
 		return -EINVAL;
+#if 0
 	} else if (sys > -10000) {
 		/* rewritable syscalls */
 		if (arch->syscall_rewrite)
 			(*arch->syscall_rewrite)(arch, syscall);
+#endif
 	}
 
 	/* syscalls not defined on this architecture */
@@ -460,6 +465,7 @@ int arch_filter_rule_add(struct db_filter *db,
 	syscall = rule_dup->syscall;
 
 	/* add the new rule to the existing filter */
+#if 0
 	if (syscall == -1 || db->arch->rule_add == NULL) {
 		/* syscalls < -1 require a db->arch->rule_add() function */
 		if (syscall < -1 && rule_dup->strict) {
@@ -469,6 +475,13 @@ int arch_filter_rule_add(struct db_filter *db,
 		rc = db_rule_add(db, rule_dup);
 	} else
 		rc = (db->arch->rule_add)(db, rule_dup);
+#else
+	if (syscall < -1 && rule_dup->strict) {
+		rc = -EDOM;
+		goto rule_add_return;
+	}
+	rc = db_rule_add(db, rule_dup);
+#endif
 
 rule_add_return:
 	/* NOTE: another reminder that we don't do any db error recovery here,
