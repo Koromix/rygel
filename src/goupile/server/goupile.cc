@@ -1017,14 +1017,6 @@ static bool PerformDuties(bool first)
         }
     }
 
-    // Make sure data loss (if it happens) is very limited in time.
-    // If it fails, exit; something is really wrong and we don't fake to it.
-    LogDebug("Checkpoint databases");
-    if (!gp_db.Checkpoint())
-        return false;
-    if (domain && !domain->Checkpoint())
-        return false;
-
     LogDebug("Prune domain");
     PruneDomain();
 
