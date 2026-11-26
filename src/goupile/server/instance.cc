@@ -16,7 +16,7 @@
 namespace K {
 
 // If you change InstanceVersion, don't forget to update the migration switch!
-const int InstanceVersion = 147;
+const int InstanceVersion = 148;
 const int LegacyVersion = 62;
 
 // Process-wide unique instance identifier
@@ -3158,9 +3158,33 @@ bool MigrateInstance(sq_Database *db, int target)
                 if (!db->Run(R"(INSERT INTO fs_settings (key, value) VALUES ('AllowStyle', 0)
                                 ON CONFLICT DO NOTHING)"))
                     return false;
+            } [[fallthrough]];
+
+            case 147: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE rec_schedules (
+                        tid TEXT NOT NULL REFERENCES rec_threads (tid) DEFERRABLE INITIALLY DEFERRED,
+                        eid TEXT NOT NULL REFERENCES rec_entries (eid) DEFERRABLE INITIALLY DEFERRED,
+                        store TEXT NOT NULL,
+                        date TEXT,
+                        period INTEGER,
+                        quota INTEGER,
+                        url TEXT NOT NULL,
+                        subject TEXT NOT NULL,
+                        html TEXT NOT NULL,
+                        text TEXT NOT NULL,
+                        ignore INTEGER CHECK (ignore IN (0, 1)) NOT NULL,
+                        sent INTEGER,
+                        changeset BLOB
+                    );
+                    CREATE INDEX rec_schedules_t ON rec_schedules (tid);
+                    CREATE UNIQUE INDEX rec_schedules_es ON rec_schedules (eid, store);
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(InstanceVersion == 147);
+            static_assert(InstanceVersion == 148);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

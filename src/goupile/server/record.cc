@@ -130,6 +130,19 @@ struct SignupInfo {
     Span<const char> text = nullptr;
 };
 
+struct ScheduleInfo {
+    const char *store = nullptr;
+
+    const char *url = nullptr;
+    const char *date = nullptr;
+    int period = 0;
+    int count = 0;
+    const char *to = nullptr;
+    const char *subject = nullptr;
+    Span<const char> html = nullptr;
+    Span<const char> text = nullptr;
+};
+
 struct BlobInfo {
     const char *sha256 = nullptr;
     const char *name = nullptr;
@@ -197,6 +210,27 @@ static bool CheckSha256(Span<const char> sha256)
     }
 
     return true;
+}
+
+static bool CheckDate(Span<const char> str)
+{
+    if (str.len != 10)
+        goto invalid;
+
+    if (!IsAsciiDigit(str[0]) || !IsAsciiDigit(str[1]) || !IsAsciiDigit(str[2]) || !IsAsciiDigit(str[3]))
+        goto invalid;
+    if (!IsAsciiDigit(str[5]) || !IsAsciiDigit(str[6]))
+        goto invalid;
+    if (!IsAsciiDigit(str[8]) || !IsAsciiDigit(str[9]))
+        goto invalid;
+    if (str[4] != '-' || str[7] != '-')
+        goto invalid;
+
+    return true;
+
+invalid:
+    LogError("Invalid date format");
+    return false;
 }
 
 bool RecordWalker::Prepare(InstanceHolder *instance, int64_t userid, const RecordFilter &filter)
@@ -1580,6 +1614,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     HeapArray<CounterInfo> counters;
     HeapArray<const char *> publics;
     SignupInfo signup = {};
+    HeapArray<ScheduleInfo> schedules;
     HeapArray<BlobInfo> blobs;
     int lock = -1;
     bool claim = true;
@@ -1679,38 +1714,62 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                         publics.Append(key);
                     }
                 } else if (key == "signup") {
-                    switch (json->PeekToken()) {
-                        case json_TokenType::Null: {
-                            json->ParseNull();
-                            signup.enable = false;
-                        } break;
-                        case json_TokenType::StartObject: {
-                            signup.enable = (session->userid >= 0);
+                    if (!json->SkipNull()) {
+                        signup.enable = true;
+
+                        for (json->ParseObject(); json->InObject(); ) {
+                            Span<const char> key = json->ParseKey();
+
+                            if (key == "url") {
+                                json->ParseString(&signup.url);
+                            } else if (key == "to") {
+                                json->ParseString(&signup.to);
+                            } else if (key == "subject") {
+                                json->ParseString(&signup.subject);
+                            } else if (key == "html") {
+                                json->ParseString(&signup.html);
+                            } else if (key == "text") {
+                                json->ParseString(&signup.text);
+                            } else {
+                                json->UnexpectedKey(key);
+                                valid = false;
+                            }
+                        }
+                    }
+                } else if (key == "schedules") {
+                    if (!json->SkipNull()) {
+                        for (json->ParseObject(); json->InObject(); ) {
+                            ScheduleInfo schedule = {};
+
+                            json->ParseKey(&schedule.store);
 
                             for (json->ParseObject(); json->InObject(); ) {
                                 Span<const char> key = json->ParseKey();
 
-                                if (key == "url") {
-                                    json->ParseString(&signup.url);
+                                if (key == "date") {
+                                    json->SkipNull() || json->ParseString(&schedule.date);
+                                } else if (key == "period") {
+                                    json->SkipNull() || json->ParseInt(&schedule.period);
+                                } else if (key == "count") {
+                                    json->SkipNull() || json->ParseInt(&schedule.count);
+                                } else if (key == "url") {
+                                    json->ParseString(&schedule.url);
                                 } else if (key == "to") {
-                                    json->ParseString(&signup.to);
+                                    json->SkipNull() || json->ParseString(&schedule.to);
                                 } else if (key == "subject") {
-                                    json->ParseString(&signup.subject);
+                                    json->SkipNull() || json->ParseString(&schedule.subject);
                                 } else if (key == "html") {
-                                    json->ParseString(&signup.html);
+                                    json->SkipNull() || json->ParseString(&schedule.html);
                                 } else if (key == "text") {
-                                    json->ParseString(&signup.text);
+                                    json->SkipNull() || json->ParseString(&schedule.text);
                                 } else {
                                     json->UnexpectedKey(key);
                                     valid = false;
                                 }
                             }
-                        } break;
 
-                        default: {
-                            LogError("Unexpected value type for signup data");
-                            valid = false;
-                        } break;
+                            schedules.Append(schedule);
+                        }
                     }
                 } else if (key == "blobs") {
                     for (json->ParseArray(); json->InArray(); ) {
@@ -1799,6 +1858,27 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                         valid = false;
                     }
                 }
+                for (const ScheduleInfo &schedule: schedules) {
+                    if (!schedule.store || !schedule.url) {
+                        LogError("Missing or invalid schedule fields");
+                        valid = false;
+                    }
+                    if (schedule.date) {
+                        valid &= CheckDate(schedule.date);
+                    }
+                    if (schedule.period < 0 || schedule.count < 0) {
+                        LogError("Invalid schedule period or count");
+                        valid = false;
+                    }
+                    if (schedule.to) {
+                        bool content = schedule.text.len || schedule.html.len;
+
+                        if (!IsMailValid(schedule.to) || !schedule.subject || !content) {
+                            LogError("Invalid schedule mail");
+                            valid = false;
+                        }
+                    }
+                }
 
                 for (const BlobInfo &blob: blobs) {
                     valid &= CheckSha256(blob.sha256);
@@ -1825,6 +1905,11 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         io->SendError(403);
         return;
     }
+    if (schedules.len && !session->HasPermission(instance, UserPermission::MessageMail)) {
+        LogError("Cannot set up schedules from this session");
+        io->SendError(403);
+        return;
+    }
 
     // Create full session for guests
     if (!session->userid) {
@@ -1844,6 +1929,7 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
     bool signup_send = false;
     smtp_MailContent signup_mail;
 
+    // Send signup mails from upgraded guest session
     if (signup.enable && session->userid < 0) {
         if (!PrepareSignup(instance, session->username, signup, io->Allocator(), &signup_mail))
             return;
@@ -2144,6 +2230,42 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
             if (!instance->db->Run(R"(INSERT INTO rec_publics (tid, eid, key, path)
                                       VALUES (?1, ?2, ?3, '$.' || replace(?4, '.', '.$v.') || '.$v'))",
                                    tid, fragment.eid, key, key))
+                return false;
+        }
+
+        // Update schedules
+        if (reservation >= 0) {
+            uint8_t changeset[32];
+            FillRandomSafe(changeset);
+
+            for (const ScheduleInfo &schedule: schedules) {
+                if (!instance->db->Run(R"(INSERT INTO rec_schedules (tid, eid, store, date, period, quota,
+                                                                     url, subject, html, text, ignore, changeset)
+                                          VALUES (?1, ?2, ?3, ?4, ?5, ?6, ?7, ?8, ?9, ?10, 0, ?11)
+                                          ON CONFLICT (eid, store) DO UPDATE SET date = excluded.date,
+                                                                                 period = excluded.period,
+                                                                                 quota = excluded.quota,
+                                                                                 url = excluded.url,
+                                                                                 subject = excluded.subject,
+                                                                                 html = excluded.html,
+                                                                                 text = excluded.text,
+                                                                                 changeset = excluded.changeset)",
+                                       tid, fragment.eid, schedule.store, schedule.date,
+                                       schedule.period ? sq_Binding(schedule.period) : sq_Binding(),
+                                       schedule.count ? sq_Binding(schedule.count) : sq_Binding(),
+                                       schedule.url, schedule.subject, schedule.html, schedule.text,
+                                       sq_Binding(changeset)))
+                    return false;
+            }
+
+            if (!instance->db->Run(R"(DELETE FROM rec_schedules
+                                      WHERE eid = ?1 AND changeset IS NOT ?2)",
+                                   fragment.eid, sq_Binding(changeset)))
+                return false;
+            if (!instance->db->Run(R"(DELETE FROM rec_schedules
+                                      WHERE tid = ?1 AND
+                                            store IN (SELECT store FROM rec_entries WHERE tid = ?1))",
+                                   tid))
                 return false;
         }
 

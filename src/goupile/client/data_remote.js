@@ -51,6 +51,7 @@ function DataRemote() {
             publics: frag.publics,
             blobs: blobs,
             signup: frag.signup,
+            schedules: frag.schedules,
 
             lock: frag.lock,
             claim: frag.claim

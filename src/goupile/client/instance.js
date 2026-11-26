@@ -2525,6 +2525,7 @@ async function saveRecord(thread, page, state, entry, raw, meta, draft) {
             counters: (ticket != null) ? meta.counters : {},
             publics: [],
             signup: (ticket != null) ? meta.signup : null,
+            schedules: (ticket != null) ? meta.schedules : null,
             claim: (ticket != null) ? claimPage(route.page) : true,
             lock: (ticket != null) ? route.page.lock : false
         };

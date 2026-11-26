@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Niels Martignène <niels.martignene@protonmail.com>
 
 import { render, html, svg } from 'vendor/lit-html/lit-html.bundle.js';
+import { Util, Log } from 'lib/web/base/base.js';
 import { contextualizeURL, computeStatus, go } from './instance.js';
 
 function MetaModel() {
@@ -11,6 +12,7 @@ function MetaModel() {
     this.constraints = {};
     this.counters = {};
     this.signup = null;
+    this.schedules = {};
 }
 
 function MetaInterface(app, page, thread, meta, state, model) {
@@ -95,28 +97,78 @@ function MetaInterface(app, page, thread, meta, state, model) {
         return value;
     };
 
-    this.signup = function (key, to, subject, content, text = null) {
-        page = app.pages.find(page => page.key == key);
+    this.signup = function (key, to, mail, content = null, text = null) {
+        if (meta.signup != null)
+            throw new Error(T.message(`Cannot call meta.signup() multiple times`));
 
+        let page = app.pages.find(page => page.key == key);
         if (page == null)
             throw new Error(T.message(`Unknown page '{1}'`, key));
 
-        let div = document.createElement('div');
-        render(content, div);
-
-        content = div.innerHTML;
-
-        if (text == null)
-            text = content.innerText;
+        mail = formatMail(mail, content, text);
 
         meta.signup = {
             url: makeCompleteURL(page.url),
             to: to,
-            subject: subject,
-            html: content,
-            text: text
+            subject: mail.subject,
+            html: mail.content,
+            text: mail.text
         };
     };
+
+    this.schedule = function (key, to, mail, content = null, text = null) {
+        let page = app.pages.find(page => page.key == key);
+        if (page == null)
+            throw new Error(T.message(`Unknown page '{1}'`, key));
+        if (page.store == null)
+            throw new Error(T.message(`Cannot schedule page without store`));
+
+        let date = mail.date ?? null;
+        let period = mail.period ?? null;
+        let count = mail.count ?? null;
+
+        mail = formatMail(mail, content, text);
+
+        meta.schedules[page.store.key] = {
+            url: makeCompleteURL(page.url),
+            to: to,
+            date: date,
+            period: period,
+            count: count,
+            subject: mail.subject,
+            html: mail.content,
+            text: mail.text
+        };
+    };
+
+    function formatMail(mail, content, text) {
+        if (Util.isPodObject(mail)) {
+            if (content || text)
+                throw new Error(T.message(`Ambiguous call to mail function`));
+
+            mail = Object.assign({}, mail);
+        } else {
+            mail = {
+                subject: mail,
+                content: content,
+                text: null
+            };
+        }
+
+        if (!mail.subject || !mail.content)
+            throw new Error(T.message(`Missing mail subject or content`));
+
+        // Render HTML
+        {
+            let div = document.createElement('div');
+            render(mail.content, div);
+
+            mail.content = div.innerHTML;
+            mail.text ??= div.innerText;
+        }
+
+        return mail;
+    }
 
     function makeCompleteURL(url) {
         if (!(url instanceof URL))
