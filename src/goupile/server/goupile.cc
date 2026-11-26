@@ -971,57 +971,66 @@ static bool OpenMainDatabase()
 
 static bool PerformDuties(bool first)
 {
+    static int64_t next_daily = 0;
+    static int64_t next_hourly = 0;
+    static int64_t last_snapshot = 0;
+
     DomainHolder *domain = RefDomain();
     K_DEFER { UnrefDomain(domain); };
 
     if (!domain)
         return true;
 
-    if (gp_config.demo_mode) {
-        LogDebug("Prune demos");
-        PruneDemos();
-    }
+    int64_t now = GetUnixTime();
 
-    // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
-    // we need to make sure they get deleted eventually.
-    LogDebug("Prune temporary files");
-    PruneOldFiles(gp_config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-    PruneOldFiles(gp_config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
-    PruneOldFiles(gp_config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
-    PruneOldFiles(gp_config.export_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+    if (now >= next_daily) {
+        if (gp_config.demo_mode) {
+            LogDebug("Prune demos");
+            PruneDemos();
+        }
 
-    LogDebug("Prune old archives");
-    if (domain) {
-        int64_t time = GetUnixTime();
-        int64_t snapshot = 0;
+        // In theory, all temporary files are deleted. But if any remain behind (crash, etc.)
+        // we need to make sure they get deleted eventually.
+        LogDebug("Prune temporary files");
+        PruneOldFiles(gp_config.database_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+        PruneOldFiles(gp_config.tmp_directory, nullptr, true, first ? 0 : 7200 * 1000);
+        PruneOldFiles(gp_config.archive_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
+        PruneOldFiles(gp_config.export_directory, "*.tmp", false, first ? 0 : 7200 * 1000);
 
+        LogDebug("Prune old archives");
         if (domain->settings.archive_retention > 0) {
             PruneOldFiles(gp_config.archive_directory, "*.goupilearchive", false,
                           domain->settings.archive_retention * 86400 * 1000);
             PruneOldFiles(gp_config.archive_directory, "*.goarch", false,
-                          domain->settings.archive_retention * 86400 * 1000, &snapshot);
+                          domain->settings.archive_retention * 86400 * 1000, &last_snapshot);
         }
 
-        if (domain->settings.archive_hour >= 0) {
-            TimeSpec spec = DecomposeTimeLocal(time);
+        next_daily = (now / 86400000ll + 1) * 86400000ll;
+    }
 
-            if (spec.hour == domain->settings.archive_hour && time - snapshot > 2 * 3600 * 1000) {
+    if (now >= next_hourly) {
+        if (domain->settings.archive_hour >= 0) {
+            TimeSpec spec = DecomposeTimeLocal(now);
+
+            if (spec.hour == domain->settings.archive_hour && now - last_snapshot > 2 * 3600 * 1000) {
                 LogInfo("Creating daily snapshot");
                 if (!ArchiveDomain())
                     return false;
-            } else if (time - snapshot > 25 * 3600 * 1000) {
+            } else if (now - last_snapshot > 25 * 3600 * 1000) {
                 LogInfo("Creating forced snapshot (previous one is old)");
                 if (!ArchiveDomain())
                     return false;
             }
         }
+
+        LogDebug("Prune domain");
+        PruneDomain();
+
+        LogDebug("Prune sessions");
+        PruneSessions();
+
+        next_hourly = (now / 3600000ll + 1) * 3600000ll;
     }
-
-    LogDebug("Prune domain");
-    PruneDomain();
-
-    LogDebug("Prune sessions");
-    PruneSessions();
 
     LogDebug("Send pending mails");
     if (!SendMails())
