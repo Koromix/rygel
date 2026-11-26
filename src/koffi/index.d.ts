@@ -6,10 +6,16 @@ type PrimitiveKind = 'Void' | 'Bool' | 'Int8' | 'UInt8' | 'Int16' | 'Int16S' | '
                      'String' | 'String16' | 'Pointer' | 'Record' | 'Union' | 'Array' | 'Float32' | 'Float64' |
                      'Prototype' | 'Callback';
 type ArrayHint = 'Array' | 'Typed' | 'Buffer' | 'String';
+type ParameterDirection = 'Input' | 'Output' | 'Input/Output';
+
+type ParameterInfo = {
+    type: TypeObject;
+    direction: ParameterDirection;
+};
 
 type PrototypeInfo = {
     name: string;
-    arguments: TypeObject[];
+    arguments: ParameterInfo[];
     result: TypeObject
 };
 
