@@ -251,6 +251,12 @@ async function runShare(secret) {
     UI.main(html`
         <div class="heading">${cache.drop.name}</div>
 
+        ${cache.drop.comment != null ? html`
+            <div class="block" style="align-items: center; white-space: pre-line;">
+                <div style="max-width: 600px;">${cache.drop.comment}</div>
+            </div>
+        ` : ''}
+
         <div class="block" style="align-items: center;">
             <div>${formatSize(cache.drop.total)}</div>
             <div class="sub" style="text-align: center;"
@@ -301,6 +307,10 @@ async function editDrop(drop) {
                         ${ENV.allow_infinite ? html`<option value="0" ?selected=${drop.expire == null}>${T.no_expiration}</option>` : ''}
                     </select>
                 </label>
+                <label>
+                    <span>${T.comment} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                    <textarea name="comment">${drop.comment ?? ''}</textarea>
+                </label>
             </div>
 
             <div class="footer">
@@ -312,6 +322,7 @@ async function editDrop(drop) {
         submit: async (elements) => {
             let name = elements.name.value.trim();
             let expiration = parseInt(elements.expiration.value, 10) || null;
+            let comment = elements.comment.value.trim() || null;
 
             if (!name)
                 throw new Error(T.message(`Missing drop name`));
@@ -322,7 +333,8 @@ async function editDrop(drop) {
 
             await Net.post(url, {
                 name: name,
-                expiration: expiration
+                expiration: expiration,
+                comment: comment
             });
 
             Net.invalidate('drop');
@@ -396,6 +408,12 @@ async function runDownload(secret) {
         <div class="heading">${cache.drop.name}</div>
 
         <form @submit=${UI.wrap(submit)}>
+            ${cache.drop.comment != null ? html`
+                <div class="block" style="align-items: center; white-space: pre-line;">
+                    <div style="max-width: 600px;">${cache.drop.comment}</div>
+                </div>
+            ` : ''}
+
             <div class="block" style="align-items: center;">
                 <div>${formatSize(cache.drop.total)}</div>
                 <div class="sub" style="text-align: center;"
@@ -758,12 +776,8 @@ async function runSend() {
                         <input type="text" name="name" placeholder=${send_files.length ? name_placeholder : ''} />
                     </label>
                     <label>
-                        <span>${T.expiration}</span>
-                        <select name="expiration">
-                            ${ENV.durations.map(duration =>
-                                html`<option value=${duration} ?selected=${duration == ENV.default_duration}>${formatDuration(duration)}</option>`)}
-                            ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
-                        </select>
+                        <span>${T.comment} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                        <textarea name="comment"></textarea>
                     </label>
                     <table class="responsive" style="table-layout: fixed;">
                         <colgroup>
@@ -792,6 +806,14 @@ async function runSend() {
                             </tr>
                         </tbody>
                     </table>
+                    <label>
+                        <span>${T.expiration}</span>
+                        <select name="expiration">
+                            ${ENV.durations.map(duration =>
+                                html`<option value=${duration} ?selected=${duration == ENV.default_duration}>${formatDuration(duration)}</option>`)}
+                            ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
+                        </select>
+                    </label>
                     <label>
                         <span>${T.password} <span class="sub">(${T.optional.toLowerCase()})</span></span>
                         <input type="password" name="password" autocomplete="new-password" />

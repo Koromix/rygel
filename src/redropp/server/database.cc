@@ -8,7 +8,7 @@
 
 namespace K {
 
-const int DatabaseVersion = 6;
+const int DatabaseVersion = 7;
 
 bool AddDatabaseFunctions(sq_Database *db)
 {
@@ -194,7 +194,7 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
-            } // [[fallthrough]];
+            } [[fallthrough]];
 
             case 5: {
                 bool success = db->RunMany(R"(
@@ -205,9 +205,17 @@ bool MigrateDatabase(sq_Database *db)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 6: {
+                bool success = db->RunMany(R"(
+                    ALTER TABLE drops ADD COLUMN comment TEXT;
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DatabaseVersion == 6);
+            static_assert(DatabaseVersion == 7);
         }
 
         if (!db->Run("INSERT INTO migrations (version, build, timestamp) VALUES (?, ?, ?)",

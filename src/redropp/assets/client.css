@@ -279,6 +279,7 @@ button:disabled { filter: saturate(0%) contrast(50%); }
     border-radius: 6px;
     gap: 0.71em;
 }
+.block + .block { margin-top: 1em; }
 .block.info {
     display: flex;
     flex-direction: column;
@@ -447,17 +448,18 @@ form {
         display: flex;
         gap: 0.43em;
         align-items: start;
-        height: 2em;
+        min-height: 2em;
         min-width: 500px;
 
         & > span:first-child {
             width: 220px;
             flex: 1;
         }
+        & > span:first-child + :is(textarea, input[type=text], input[type=password]) { flex: 1; }
     }
     & label:has(> :only-child) { justify-content: center; }
     & label:empty { display: none; }
-    & :not(.section) + label { margin-top: 0.5em; }
+    & :not(.section):not(table) + label { margin-top: 0.5em; }
 }
 
 input {
@@ -470,7 +472,7 @@ input {
 }
 textarea {
     align-self: stretch;
-    padding: 0.4em 0.6em;
+    padding: 0.2em 0.4em 0.3em 0.4em;
     border: none;
     background: white;
     border: 1px solid var(--input_color);

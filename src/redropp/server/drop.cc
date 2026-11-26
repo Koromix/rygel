@@ -254,7 +254,7 @@ void HandleDropInfo(http_IO *io)
     int64_t now = GetUnixTime();
 
     sq_Statement stmt;
-    if (!db.Prepare(R"(SELECT kid_str(d.kid) AS kid, d.ctime, d.name, d.protect,
+    if (!db.Prepare(R"(SELECT kid_str(d.kid) AS kid, d.ctime, d.name, d.comment, d.protect,
                               IFNULL(d.expire, -1) AS expire, d.complete, d.owner, d.total,
                               kid_str(f.kid), f.name, f.size, f.split, f.header, f.nonce
                        FROM drops d
@@ -277,11 +277,12 @@ void HandleDropInfo(http_IO *io)
     const char *id = (const char *)sqlite3_column_text(stmt, 0);
     int64_t ctime = sqlite3_column_int64(stmt, 1);
     const char *name = (const char *)sqlite3_column_text(stmt, 2);
-    bool protect = sqlite3_column_int(stmt, 3);
-    int64_t expire = sqlite3_column_int64(stmt, 4);
-    int64_t complete = sqlite3_column_int64(stmt, 5);
-    int64_t owner = sqlite3_column_int64(stmt, 6);
-    int64_t total = sqlite3_column_int64(stmt, 7);
+    const char *comment = (const char *)sqlite3_column_text(stmt, 3);
+    bool protect = sqlite3_column_int(stmt, 4);
+    int64_t expire = sqlite3_column_int64(stmt, 5);
+    int64_t complete = sqlite3_column_int64(stmt, 6);
+    int64_t owner = sqlite3_column_int64(stmt, 7);
+    int64_t total = sqlite3_column_int64(stmt, 8);
 
     bool owned = session && (session->userid == owner);
 
@@ -297,6 +298,7 @@ void HandleDropInfo(http_IO *io)
         json->Key("kid"); json->String(id);
         json->Key("ctime"); json->Int64(ctime);
         json->Key("name"); json->String(name);
+        json->Key("comment"); json->StringOrNull(comment);
         if (expire >= 0) {
             json->Key("expire"); json->Int64(expire);
         } else {
@@ -309,14 +311,14 @@ void HandleDropInfo(http_IO *io)
         }
 
         json->Key("files"); json->StartArray();
-        if (sqlite3_column_type(stmt, 8) != SQLITE_NULL) {
+        if (sqlite3_column_type(stmt, 9) != SQLITE_NULL) {
             do {
-                const char *id = (const char *)sqlite3_column_text(stmt, 8);
-                const char *name = (const char *)sqlite3_column_text(stmt, 9);
-                int64_t size = sqlite3_column_int64(stmt, 10);
-                int64_t split = sqlite3_column_int64(stmt, 11);
-                const char *header = (const char *)sqlite3_column_text(stmt, 12);
-                const char *nonce = (const char *)sqlite3_column_text(stmt, 13);
+                const char *id = (const char *)sqlite3_column_text(stmt, 9);
+                const char *name = (const char *)sqlite3_column_text(stmt, 10);
+                int64_t size = sqlite3_column_int64(stmt, 11);
+                int64_t split = sqlite3_column_int64(stmt, 12);
+                const char *header = (const char *)sqlite3_column_text(stmt, 13);
+                const char *nonce = (const char *)sqlite3_column_text(stmt, 14);
 
                 json->StartObject();
                 json->Key("kid"); json->String(id);
@@ -365,6 +367,7 @@ void HandleDropSave(http_IO *io)
     }
 
     const char *name = nullptr;
+    const char *comment = nullptr;
     int64_t expiration = -1;
     bool protect = false;
     {
@@ -376,6 +379,8 @@ void HandleDropSave(http_IO *io)
 
                 if (key == "name") {
                     json->ParseString(&name);
+                } else if (key == "comment") {
+                    json->SkipNull() || json->ParseString(&comment);
                 } else if (key == "expiration") {
                     json->SkipNull() || json->ParseInt(&expiration);
                 } else if (key == "protect") {
@@ -390,6 +395,10 @@ void HandleDropSave(http_IO *io)
             if (valid) {
                 if (!IsStringValid(name)) {
                     LogError("Invalid 'name' parameter");
+                    valid = false;
+                }
+                if (comment && !IsStringValid(comment, "\n")) {
+                    LogError("Invalid 'comment' parameter");
                     valid = false;
                 }
                 if (expiration < 0 && !config.allow_infinite) {
@@ -416,17 +425,18 @@ void HandleDropSave(http_IO *io)
     // Create or update
     {
         sq_Statement stmt;
-        if (!db.Prepare(R"(INSERT INTO drops (kid, owner, ctime, name, expire, protect, total, complete, deleted)
-                           VALUES (?1, IIF(?2 = 0, ?4, -1), ?5, ?6, ?7, ?8, 0, NULL, 0)
+        if (!db.Prepare(R"(INSERT INTO drops (kid, owner, ctime, name, comment, expire, protect, total, complete, deleted)
+                           VALUES (?1, IIF(?2 = 0, ?4, -1), ?5, ?6, ?7, ?8, ?9, 0, NULL, 0)
                            ON CONFLICT (kid) DO UPDATE SET name = excluded.name,
+                                                           comment = excluded.comment,
                                                            expire = IIF(excluded.expire IS NOT NULL, ctime - excluded.ctime + excluded.expire, NULL)
                                              WHERE ?2 = 1 AND
                                                    owner = ?4 AND
                                                    deleted = 0 AND
                                                    (complete IS NULL OR excluded.ctime < complete + ?3)
                            RETURNING kid)",
-                    &stmt, sq_Binding(kid.raw), 0 + update, config.edit_window,
-                    session->userid, now, name, expire >= 0 ? sq_Binding(expire) : sq_Binding(), 0 + protect)) {
+                    &stmt, sq_Binding(kid.raw), 0 + update, config.edit_window, session->userid,
+                    now, name, comment, expire >= 0 ? sq_Binding(expire) : sq_Binding(), 0 + protect)) {
             return;
         }
         if (!stmt.Step()) {
