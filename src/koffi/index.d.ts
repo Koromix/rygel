@@ -11,10 +11,12 @@ type ParameterDirection = 'Input' | 'Output' | 'Input/Output';
 type ParameterInfo = {
     type: TypeObject;
     direction: ParameterDirection;
+    variadic: boolean;
 };
 
 type PrototypeInfo = {
     name: string;
+    variadic: boolean;
     arguments: ParameterInfo[];
     result: TypeObject
 };
