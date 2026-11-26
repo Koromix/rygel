@@ -1031,6 +1031,13 @@ static bool PerformDuties(bool first)
     LogDebug("Prune sessions");
     PruneSessions();
 
+    LogDebug("Send pending mails");
+    if (!SendMails())
+        return false;
+    LogDebug("Send pending SMS");
+    if (!SendSMS())
+        return false;
+
     LogDebug("Check zygote");
     if (!CheckZygote())
         return false;
@@ -1277,8 +1284,10 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
         LogInfo("Periodic timer set to %1 s", FmtDouble((double)timeout / 1000.0, 1));
 
         while (run) {
-            if (!PerformDuties(first))
-                return 1;
+            if (!PerformDuties(first)) {
+                status = 1;
+                break;
+            }
 
             WaitResult ret = WaitEvents(timeout);
 

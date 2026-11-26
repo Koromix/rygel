@@ -13,6 +13,23 @@
 
 namespace K {
 
+static const int RetryDelay = 1 * 60000; // 1 minute
+static const int DropDelay = 20 * 60000; // 20 minutes
+static const int MaxErrors = 4;
+
+static smtp_Sender smtp;
+static sms_Sender sms;
+
+bool InitSMTP(const smtp_Config &config)
+{
+    return smtp.Init(config);
+}
+
+bool InitSMS(const sms_Config &config)
+{
+    return sms.Init(config);
+}
+
 bool IsMailValid(Span<const char> address)
 {
     const auto test_char = [](char c) { return strchr("<>& ", c) || IsAsciiControl(c); };
@@ -45,20 +62,25 @@ bool IsPhoneValid(Span<const char> number)
     return true;
 }
 
-bool SendMail(const char *to, const smtp_MailContent &content)
+bool PostMail(const char *to, const smtp_MailContent &content)
 {
-    K_ASSERT(IsMailValid(to));
+    BlockAllocator temp_alloc;
 
-    DomainHolder *domain = RefDomain();
-    K_DEFER { UnrefDomain(domain); };
+    const char *from = smtp.GetConfig().from;
+    Span<const char> mail = smtp_BuildMail(from, to, content, &temp_alloc);
+    int64_t now = GetUnixTime();
 
-    smtp_Sender smtp;
-    if (!smtp.Init(domain->settings.smtp))
+    if (!gp_db.Run(R"(INSERT INTO msg_mails (address, mail, ctime, errors, timestamp)
+                      VALUES (?1, ?2, ?3, 0, ?3))", to, mail, now))
         return false;
-    return smtp.Send(to, content);
+
+    // Run pending tasks
+    PostWaitMessage();
+
+    return true;
 }
 
-bool SendSMS(const char *to, const char *message)
+bool PostSMS(const char *to, const char *message)
 {
     K_ASSERT(IsPhoneValid(to));
 
@@ -66,6 +88,156 @@ bool SendSMS(const char *to, const char *message)
     if (!sms.Init(gp_config.sms))
         return false;
     return sms.Send(to, message);
+}
+
+bool SendMails()
+{
+    BlockAllocator temp_alloc;
+
+    int64_t now = GetUnixTime();
+
+    sq_Statement stmt;
+    if (!gp_db.Prepare(R"(SELECT id, address, mail, ctime, errors, timestamp
+                          FROM msg_mails
+                          WHERE timestamp <= ?1)", &stmt, now))
+        return false;
+
+    Async async;
+
+    while (stmt.Step()) {
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        const char *to = (const char *)sqlite3_column_text(stmt, 1);
+        Span<const char> mail = MakeSpan((const char *)sqlite3_column_text(stmt, 2),
+                                         sqlite3_column_bytes(stmt, 2));
+        int64_t ctime = sqlite3_column_int64(stmt, 3);
+        int64_t errors = sqlite3_column_int64(stmt, 4);
+        int64_t timestamp = sqlite3_column_int64(stmt, 5);
+
+        // Commit send task
+        {
+            int64_t next = now + RetryDelay;
+
+            sq_Statement stmt;
+            if (!gp_db.Prepare(R"(UPDATE msg_mails SET timestamp = ?3
+                                  WHERE id = ?1 AND timestamp = ?2
+                                  RETURNING id)",
+                            &stmt, id, timestamp, next))
+                return false;
+
+            if (!stmt.Step()) {
+                if (!stmt.IsValid())
+                    return false;
+                continue;
+            }
+        }
+
+        to = DuplicateString(to, &temp_alloc).ptr;
+        mail = DuplicateString(mail, &temp_alloc);
+
+        async.Run([=]() {
+            if (!smtp.Send(to, mail)) {
+                bool persist = (errors + 1) < MaxErrors;
+
+                if (now - ctime >= DropDelay) {
+                    if (!gp_db.Run("DELETE FROM msg_mails WHERE id = ?1", id))
+                        return false;
+                } else {
+                    int64_t next = persist ? (errors + 1) : 0;
+
+                    if (!gp_db.Run("UPDATE msg_mails SET errors = ?2 WHERE id = ?1", id, next))
+                        return false;
+                }
+
+                return persist;
+            }
+
+            if (!gp_db.Run("DELETE FROM msg_mails WHERE id = ?1", id))
+                return false;
+
+            return true;
+        });
+    }
+    if (!stmt.IsValid())
+        return false;
+
+    stmt.Finalize();
+
+    return async.Sync();
+}
+
+bool SendSMS()
+{
+    BlockAllocator temp_alloc;
+
+    int64_t now = GetUnixTime();
+
+    sq_Statement stmt;
+    if (!gp_db.Prepare(R"(SELECT id, phone, message, ctime, errors, timestamp
+                          FROM msg_texts
+                          WHERE timestamp <= ?1)", &stmt, now))
+        return false;
+
+    Async async;
+
+    while (stmt.Step()) {
+        int64_t id = sqlite3_column_int64(stmt, 0);
+        const char *phone = (const char *)sqlite3_column_text(stmt, 1);
+        Span<const char> message = MakeSpan((const char *)sqlite3_column_text(stmt, 2),
+                                            sqlite3_column_bytes(stmt, 2));
+        int64_t ctime = sqlite3_column_int64(stmt, 3);
+        int64_t errors = sqlite3_column_int64(stmt, 4);
+        int64_t timestamp = sqlite3_column_int64(stmt, 5);
+
+        // Commit send task
+        {
+            int64_t next = now + RetryDelay;
+
+            sq_Statement stmt;
+            if (!gp_db.Prepare(R"(UPDATE msg_texts SET timestamp = ?3
+                                  WHERE id = ?1 AND timestamp = ?2
+                                  RETURNING id)",
+                            &stmt, id, timestamp, next))
+                return false;
+
+            if (!stmt.Step()) {
+                if (!stmt.IsValid())
+                    return false;
+                continue;
+            }
+        }
+
+        phone = DuplicateString(phone, &temp_alloc).ptr;
+        message = DuplicateString(message, &temp_alloc);
+
+        async.Run([=]() {
+            if (!sms.Send(phone, message)) {
+                bool persist = (errors + 1) < MaxErrors;
+
+                if (now - ctime >= DropDelay) {
+                    if (!gp_db.Run("DELETE FROM msg_texts WHERE id = ?1", id))
+                        return false;
+                } else {
+                    int64_t next = persist ? (errors + 1) : 0;
+
+                    if (!gp_db.Run("UPDATE msg_texts SET errors = ?2 WHERE id = ?1", id, next))
+                        return false;
+                }
+
+                return persist;
+            }
+
+            if (!gp_db.Run("DELETE FROM msg_texts WHERE id = ?1", id))
+                return false;
+
+            return true;
+        });
+    }
+    if (!stmt.IsValid())
+        return false;
+
+    stmt.Finalize();
+
+    return async.Sync();
 }
 
 void HandleSendMail(http_IO *io, InstanceHolder *instance)
@@ -138,7 +310,8 @@ void HandleSendMail(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    SendMail(to, content);
+    if (!PostMail(to, content))
+        return;
 
     io->SendText(200, "{}", "application/json");
 }
@@ -216,7 +389,8 @@ void HandleSendSMS(http_IO *io, InstanceHolder *instance)
         }
     }
 
-    SendSMS(to, message);
+    if (!PostSMS(to, message))
+        return;
 
     io->SendText(200, "{}", "application/json");
 }

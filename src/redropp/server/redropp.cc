@@ -905,7 +905,7 @@ For help about those commands, type: %!..+%1 command --help%!0)"),
             LogDebug("Prune sessions");
             PruneSessions();
 
-            LogDebug("Send mails");
+            LogDebug("Send pending mails");
             if (!SendMails()) {
                 status = 1;
                 run = false;

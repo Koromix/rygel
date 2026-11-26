@@ -728,7 +728,8 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
             </div>
         )", code);
 
-        SendMail(email, content);
+        if (!PostMail(email, content))
+            return nullptr;
     } else if (sms) {
         if (gp_config.sms.provider == sms_Provider::None) [[unlikely]] {
             LogError("This domain is not configured to send SMS messages");
@@ -749,7 +750,8 @@ static RetainPtr<SessionInfo> CreateAutoSession(InstanceHolder *instance, Sessio
 
         const char *message = Fmt(&temp_alloc, "Code: %1", code).ptr;
 
-        SendSMS(sms, message);
+        if (!PostSMS(sms, message))
+            return nullptr;
     } else {
         session = CreateUserSession(type, userid, username, local_key);
     }

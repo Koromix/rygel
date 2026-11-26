@@ -32,10 +32,10 @@ class sms_Sender {
 
 public:
     bool Init(const sms_Config &config);
-    bool Send(const char *to, const char *message);
+    bool Send(const char *to, Span<const char> message);
 
 private:
-    bool SendTwilio(const char *to, const char *message);
+    bool SendTwilio(const char *to, Span<const char> message);
 };
 
 }

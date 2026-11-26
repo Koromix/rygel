@@ -9,7 +9,7 @@
 
 namespace K {
 
-const int DomainVersion = 117;
+const int DomainVersion = 118;
 const int MaxInstances = 1024;
 
 static std::mutex mutex;
@@ -1616,9 +1616,33 @@ bool MigrateDomain(sq_Database *db, const char *instances_directory)
                 )");
                 if (!success)
                     return false;
+            } [[fallthrough]];
+
+            case 117: {
+                bool success = db->RunMany(R"(
+                    CREATE TABLE msg_mails (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        address TEXT NOT NULL,
+                        mail TEXT NOT NULL,
+                        ctime INTEGER NOT NULL,
+                        errors INTEGER NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    );
+
+                    CREATE TABLE msg_texts (
+                        id INTEGER PRIMARY KEY NOT NULL,
+                        phone TEXT NOT NULL,
+                        message TEXT NOT NULL,
+                        ctime INTEGER NOT NULL,
+                        errors INTEGER NOT NULL,
+                        timestamp INTEGER NOT NULL
+                    );
+                )");
+                if (!success)
+                    return false;
             } // [[fallthrough]];
 
-            static_assert(DomainVersion == 117);
+            static_assert(DomainVersion == 118);
         }
 
         if (!db->Run("INSERT INTO adm_migrations (version, build, time) VALUES (?, ?, ?)",

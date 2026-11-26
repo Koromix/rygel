@@ -1841,6 +1841,15 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
         K_ASSERT(session->userid < 0);
     }
 
+    bool signup_send = false;
+    smtp_MailContent signup_mail;
+
+    if (signup.enable && session->userid < 0) {
+        if (!PrepareSignup(instance, session->username, signup, io->Allocator(), &signup_mail))
+            return;
+        signup_send = true;
+    }
+
     int64_t new_anchor = -1;
 
     bool success = instance->db->Transaction([&]() {
@@ -2160,23 +2169,17 @@ void HandleRecordSave(http_IO *io, InstanceHolder *instance)
                                          -session->userid, tid))
             return false;
 
+        // Post signup mail
+        if (signup_send) {
+            if (!PostMail(signup.to, signup_mail))
+                return false;
+            LogDebug("Sent signup mail to '%1'", signup.to);
+        }
+
         return true;
     });
     if (!success)
         return;
-
-    // Best effort
-    if (signup.enable && session->userid < 0) {
-        do {
-            smtp_MailContent content;
-
-            if (!PrepareSignup(instance, session->username, signup, io->Allocator(), &content))
-                break;
-            SendMail(signup.to, content);
-
-            LogDebug("Sent signup mail to '%1'", signup.to);
-        } while (false);
-    }
 
     const char *response = Fmt(io->Allocator(), "{ \"anchor\": %1 }", new_anchor).ptr;
     io->SendText(200, response, "application/json");

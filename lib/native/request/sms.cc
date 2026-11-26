@@ -46,7 +46,7 @@ bool sms_Sender::Init(const sms_Config &config)
     return true;
 }
 
-bool sms_Sender::Send(const char *to, const char *message)
+bool sms_Sender::Send(const char *to, Span<const char> message)
 {
     K_ASSERT(config.provider != sms_Provider::None);
 
@@ -58,7 +58,7 @@ bool sms_Sender::Send(const char *to, const char *message)
     K_UNREACHABLE();
 }
 
-bool sms_Sender::SendTwilio(const char *to, const char *message)
+bool sms_Sender::SendTwilio(const char *to, Span<const char> message)
 {
     BlockAllocator temp_alloc;
 
