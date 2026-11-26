@@ -14,7 +14,7 @@
 
 *Released on 2026-11-18*
 
-- Fix broken identiy provider unlinking in security dialog (regression introduced in Redropp 0.10.0)
+- Fix broken identity provider unlinking in security dialog (regression introduced in Redropp 0.10.0)
 
 ### Redropp 0.10.0
 
