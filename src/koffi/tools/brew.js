@@ -531,7 +531,7 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
             directories.push('../koffi');
 
             for (let dir of directories) {
-                let proc = spawnSync('npm', ['install', '--ignore-scripts', dir], { cwd: install_dir });
+                let proc = spawnSync('npm', ['install', '--install-links', '--ignore-scripts', dir], { cwd: install_dir });
 
                 if (proc.status !== 0) {
                     let stdout = proc.stdout?.toString?.()?.trim();
@@ -556,7 +556,7 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
         {
             copyRecursive(dist_dir + '/koffi', install_dir + '/pkg', filename => !filename.startsWith('build/'));
 
-            let proc = spawnSync('npm', ['install', '--omit=optional', install_dir + '/pkg'], { cwd: install_dir });
+            let proc = spawnSync('npm', ['install', '--install-links', '--omit=optional', install_dir + '/pkg'], { cwd: install_dir });
 
             if (proc.status !== 0) {
                 let stdout = proc.stdout?.toString?.()?.trim();
@@ -614,9 +614,13 @@ This contains the ${pkg.target} binaries for [Koffi](https://koffi.dev), a fast 
 function testPackage(install_dir) {
     let tests = [
         ['CJS koffi', 'const koffi = require("koffi");', '.cjs'],
-        ['CJS index.cjs', 'const koffi = require("../koffi/index.cjs");', '.cjs'],
+        ['CJS koffi (static)', 'const koffi = require("koffi");', '.cjs', { SKIP_DYNAMIC_LOAD: '1' }],
+        ['CJS index.cjs', 'const koffi = require("./node_modules/koffi/index.cjs");', '.cjs'],
+        ['CJS index.cjs (static)', 'const koffi = require("./node_modules/koffi/index.cjs");', '.cjs', { SKIP_DYNAMIC_LOAD: '1' }],
         ['ESM koffi', 'import koffi from "koffi";', '.mjs'],
-        ['ESM index.js', 'import koffi from "../koffi/index.js"', '.mjs'],
+        ['ESM koffi (static)', 'import koffi from "koffi";', '.mjs', { SKIP_DYNAMIC_LOAD: '1' }],
+        ['ESM index.js', 'import koffi from "./node_modules/koffi/index.js"', '.mjs'],
+        ['ESM index.js (static)', 'import koffi from "./node_modules/koffi/index.js"', '.mjs', { SKIP_DYNAMIC_LOAD: '1' }],
         ['CJS koffi/indirect', 'const koffi = require("koffi/indirect");', '.cjs'],
         ['ESM koffi/indirect', 'import koffi from "koffi/indirect";', '.mjs'],
         ['TS koffi', 'import koffi from "koffi";', '.ts'],
@@ -624,7 +628,7 @@ function testPackage(install_dir) {
     ];
 
     for (let i = 0; i < tests.length; i++) {
-        let [title, method, ext] = tests[i];
+        let [title, method, ext, env] = tests[i];
 
         let filename = install_dir + `/${i}${ext}`;
         let code = method + `\nkoffi.config({ max_type_size: 1024 });\nconsole.log(koffi.version)`;
@@ -677,14 +681,14 @@ function testPackage(install_dir) {
     }
 
     for (let i = 0; i < tests.length; i++) {
-        let [title, method, ext] = tests[i];
+        let [title, method, ext, env] = tests[i];
 
         if (ext == '.ts')
             ext = '.js';
 
         let filename = install_dir + `/${i}${ext}`;
 
-        let proc = spawnSync(process.execPath, ['--no-warnings', filename], { cwd: install_dir });
+        let proc = spawnSync(process.execPath, ['--no-warnings', filename], { cwd: install_dir, env: { ...process.env, ...env } });
 
         if (proc.status === 0) {
             let version = proc.stdout.toString().trim();

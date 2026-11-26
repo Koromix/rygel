@@ -28,6 +28,14 @@ function detectPlatform() {
 }
 
 function loadDynamic(dirname, pkg, triplets) {
+    if (process.env.SKIP_DYNAMIC_LOAD != null) {
+        let str = process.env.SKIP_DYNAMIC_LOAD.toLowerCase();
+
+        // Refuse if environment does not let us
+        if (str != 'no' && str != 'false' && str != 'off' && parseInt(str, 10) !== 0)
+            return null;
+    }
+
     let suffix = '/../../build/koffi';
     REPOSITORY: suffix = '/../../bin/Koffi';
 
