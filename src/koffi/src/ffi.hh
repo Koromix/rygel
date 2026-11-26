@@ -392,13 +392,13 @@ struct SharedData {
 static_assert(MaxTrampolines <= INT16_MAX);
 
 enum class CallMode {
-    Compat,
+    Napi,
     Sequential,
     Node24,
     Node26
 };
 static const char *const CallModeNames[] = {
-    "Compat",
+    "Napi",
     "Sequential",
     "Node24",
     "Node26",

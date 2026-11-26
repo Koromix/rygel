@@ -42,7 +42,7 @@ const napi_type_tag UnionValueMarker = { 0x5eaf2245526a4c7d, 0x8c86c9ee2b96ffc8 
 const napi_type_tag CastMarker = { 0x77f459614a0a412f, 0x80b3dda1341dc8df };
 
 SharedData shared;
-CallMode sync_mode = CallMode::Compat;
+CallMode sync_mode = CallMode::Napi;
 
 // Some Node-API functions are loaded dynamically to work around bugs or because they are recent
 napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_finalize finalize_cb, void* finalize_data, void* finalize_hint);

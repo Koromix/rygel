@@ -2038,13 +2038,13 @@ CallMode DetectCallMode(Napi::Env env)
     static_assert(sizeof(napi_value) == sizeof(uintptr_t));
 
     if (K_SIZE(void *) != 8)
-        return CallMode::Compat;
+        return CallMode::Napi;
     if (DetectBun(env))
-        return CallMode::Compat;
+        return CallMode::Napi;
     if (DetectDeno(env))
-        return CallMode::Compat;
+        return CallMode::Napi;
 
-    CallMode mode = CallMode::Compat;
+    CallMode mode = CallMode::Napi;
 
     // The detection function needs to run from inside a JS-to-C call
     {
@@ -2171,11 +2171,11 @@ static napi_value CreateSyncWrapper(InstanceData *instance, const FunctionInfo *
             case CallMode::Node26: { wrapper = SelectSyncWrapper<CallInfoNode26>(env, func); } break;
             case CallMode::Node24: { wrapper = SelectSyncWrapper<CallInfoNode24>(env, func); } break;
             case CallMode::Sequential: { wrapper = SelectSyncWrapper<CallInfoSequential>(env, func); } break;
-            case CallMode::Compat: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateCompatCall, (void *)func->Ref(), &wrapper)); } break;
+            case CallMode::Napi: { NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateCompatCall, (void *)func->Ref(), &wrapper)); } break;
         }
 
         if (!wrapper) {
-            K_ASSERT(sync_mode != CallMode::Compat);
+            K_ASSERT(sync_mode != CallMode::Napi);
 
             NAPI_OK(napi_create_function(env, func->name, NAPI_AUTO_LENGTH, TranslateNormalCall, (void *)func->Ref(), &wrapper));
             K_ASSERT(wrapper);
@@ -2358,13 +2358,13 @@ napi_value CallPointer(Napi::Env env, const FunctionInfo *proto, Span<napi_value
                 args[j++] = args[i + 1];
             }
 
-            if (!SpecializeVariadicFunction(env, proto, MakeSpan(types, extra), CallMode::Compat, &variadic))
+            if (!SpecializeVariadicFunction(env, proto, MakeSpan(types, extra), CallMode::Napi, &variadic))
                 return nullptr;
         }
 
         return TranslateCompatCall(env, &variadic, args.ptr, native);
     } else {
-        bool compat = (sync_mode == CallMode::Compat);
+        bool compat = (sync_mode == CallMode::Napi);
 
         return compat ? TranslateCompatCall(env, proto, args.ptr, native)
                       : TranslateNormalCall(env, proto, args.len ? args[0] : nullptr, native);

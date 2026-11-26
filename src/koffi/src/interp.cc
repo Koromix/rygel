@@ -478,7 +478,7 @@ bool PreparePlan(InstanceData *instance, FunctionInfo *func, CallMode mode)
 
     // Convert opcodes to function pointers (if needed)
 #if defined(MUST_TAIL)
-    if (mode == CallMode::Compat) {
+    if (mode == CallMode::Napi) {
         for (OpData &op: func->plan.sync) {
             op.o = (void *)ForwardDispatchCompat[(uintptr_t)op.o];
         }
