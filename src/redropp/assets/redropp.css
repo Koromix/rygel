@@ -53,6 +53,7 @@ li + .picture { margin-left: -1em; }
         text-transform: none;
     }
     & li > a {
+        margin-top: 1px;
         border-bottom: none;
         color: inherit;
     }
