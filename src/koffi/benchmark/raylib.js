@@ -28,6 +28,7 @@ function main() {
         'Node-API': r ? time => runNapi(time) : undefined,
         'Koffi v3': time => runKoffi(koffi, time),
         'Koffi v2': koffi2 ? time => runKoffi(koffi2, time) : undefined,
+        'node-ctypes': ctypes ? time => runNodeCTypes(time) : undefined,
         'ffi-napi': ffi_napi ? time => runFfiNapi(time) : undefined
     };
 
@@ -215,6 +216,125 @@ function runKoffi(koffi, time) {
             };
 
             ImageDrawTextEx(img, font, text, pos, 10, 1, color);
+        }
+
+        iterations += 360;
+    }
+
+    time = performance.now() - start;
+    return { iterations: iterations, time: Math.round(time) };
+}
+
+function runNodeCTypes(time) {
+    class Color extends ctypes.Structure {
+        static _fields_ = [
+            ['r', ctypes.c_uint8],
+            ['g', ctypes.c_uint8],
+            ['b', ctypes.c_uint8],
+            ['a', ctypes.c_uint8]
+        ];
+    }
+
+    class Image extends ctypes.Structure {
+        static _fields_ = [
+            ['data', ctypes.c_void_p],
+            ['width', ctypes.c_int32],
+            ['height', ctypes.c_int32],
+            ['mipmaps', ctypes.c_int32],
+            ['format', ctypes.c_int32]
+        ];
+    }
+
+    class GlyphInfo extends ctypes.Structure {
+        static _fields_ = [
+            ['value', ctypes.c_int32],
+            ['offsetX', ctypes.c_int32],
+            ['offsetY', ctypes.c_int32],
+            ['advanceX', ctypes.c_int32],
+            ['image', Image]
+        ];
+    }
+
+    class Vector2 extends ctypes.Structure {
+        static _fields_ = [
+            ['x', ctypes.c_float],
+            ['y', ctypes.c_float]
+        ];
+    }
+
+    class Rectangle extends ctypes.Structure {
+        static _fields_ = [
+            ['x', ctypes.c_float],
+            ['y', ctypes.c_float],
+            ['width', ctypes.c_float],
+            ['height', ctypes.c_float]
+        ];
+    }
+
+    class Texture extends ctypes.Structure {
+        static _fields_ = [
+            ['id', ctypes.c_uint32],
+            ['width', ctypes.c_int32],
+            ['height', ctypes.c_int32],
+            ['mipmaps', ctypes.c_int32],
+            ['format', ctypes.c_int32]
+        ];
+    }
+
+    class Font extends ctypes.Structure {
+        static _fields_ = [
+            ['baseSize', ctypes.c_int32],
+            ['glyphCount', ctypes.c_int32],
+            ['glyphPadding', ctypes.c_int32],
+            ['texture', Texture],
+            ['recs', ctypes.POINTER(Rectangle)],
+            ['glyphs', ctypes.POINTER(GlyphInfo)]
+        ];
+    }
+
+    let lib_filename = path.join(__dirname, pkg.cnoke.output, 'raylib' + koffi.extension);
+    let lib = new ctypes.CDLL(lib_filename);
+
+    const InitWindow = lib.func('InitWindow', null, [ctypes.c_int32, ctypes.c_int32, ctypes.c_char_p]);
+    const SetTraceLogLevel = lib.func('SetTraceLogLevel', null, [ctypes.c_int32]);
+    const GenImageColor = lib.func('GenImageColor', Image, [ctypes.c_int32, ctypes.c_int32, Color]);
+    const GetFontDefault = lib.func('GetFontDefault', Font, []);
+    const MeasureTextEx = lib.func('MeasureTextEx', Vector2, [Font, ctypes.c_char_p, ctypes.c_float, ctypes.c_float]);
+    const ImageClearBackground = lib.func('ImageClearBackground', null, [ctypes.POINTER(Image), Color]);
+    const ImageDrawTextEx = lib.func('ImageDrawTextEx', null, [ctypes.POINTER(Image), Font, ctypes.c_char_p, Vector2, ctypes.c_float, ctypes.c_float]);
+    const ExportImage = lib.func('ExportImage', ctypes.c_bool, [Image, ctypes.c_char_p]);
+
+    // We need to call InitWindow before using anything else (such as fonts)
+    SetTraceLogLevel(5); // Errors
+    InitWindow(800, 600, "Raylib Test");
+
+    let img = GenImageColor(800, 600, new Color(0, 0, 0, 255));
+    let imgp = ctypes.byref(img);
+    let font = GetFontDefault();
+
+    let start = performance.now();
+    let iterations = 0;
+
+    while (performance.now() - start < time) {
+        ImageClearBackground(imgp, new Color(0, 0, 0, 255));
+
+        for (let i = 0; i < 360; i++) {
+            let text = 'Hello World!';
+            let text_width = MeasureTextEx(font, text, 10, 1).x;
+
+            let angle = (i * 7) * Math.PI / 180;
+            let color = new Color(
+                Math.trunc(127.5 + 127.5 * Math.sin(angle)),
+                Math.trunc(127.5 + 127.5 * Math.sin(angle + Math.PI / 2)),
+                Math.trunc(127.5 + 127.5 * Math.sin(angle + Math.PI)),
+                255
+            );
+            let pos = new Vector2(
+                (img.width / 2 - text_width / 2) + i * 0.1 * Math.cos(angle - Math.PI / 2),
+                (img.height / 2 - 16) + i * 0.1 * Math.sin(angle - Math.PI / 2)
+            );
+
+            ImageDrawTextEx(imgp, font, text, pos, 10, 1, color);
         }
 
         iterations += 360;
