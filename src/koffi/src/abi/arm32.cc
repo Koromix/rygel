@@ -114,6 +114,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                     offset = 4 * gpr0;
                     gpr_index = gpr0 + 2;
                 } else {
+                    gpr_index = gpr_max;
                     stack_offset = AlignLen(stack_offset, 8);
                     offset = 24 * 4 + stack_offset;
                     stack_offset += 8;
@@ -212,6 +213,7 @@ void AnalyseFunction(InstanceData *instance, const FunctionInfo *func, Execution
                         offset = 4 * gpr0;
                         gpr_index = gpr0 + 2;
                     } else {
+                        gpr_index = gpr_max;
                         stack_offset = AlignLen(stack_offset, 8);
                         offset = 24 * 4 + stack_offset;
                         stack_offset += 8;
