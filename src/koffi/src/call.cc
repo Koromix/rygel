@@ -521,6 +521,22 @@ bool CallData::PushObject(napi_value obj, const TypeInfo *type, uint8_t *origin)
         }
     }
 
+    if (type->encode) {
+        napi_value undefined;
+        napi_value encode;
+
+        NAPI_OK(napi_get_undefined(env, &undefined));
+        NAPI_OK(napi_get_reference_value(env, type->encode, &encode));
+
+        MemSet(type->convert_buf, type->fill, type->size);
+
+        if (napi_call_function(env, undefined, encode, 1, &obj, nullptr) != napi_ok) [[unlikely]]
+            return false;
+
+        MemCpy(origin, type->convert_buf, type->size);
+        return true;
+    }
+
     MemSet(origin, type->fill, type->size);
 
 #define PUSH_INTEGER(CType) \

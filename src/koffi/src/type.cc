@@ -18,6 +18,8 @@ static void ReleaseTypeReferences(Napi::BasicEnv env, TypeInfo *type)
     }
 
     node_api_delete_reference(env, type->dispose_ref);
+    node_api_delete_reference(env, type->decode);
+    node_api_delete_reference(env, type->encode);
     node_api_delete_reference(env, type->construct);
     node_api_delete_reference(env, type->defn);
 }
@@ -573,6 +575,216 @@ void InitArrayAttributes(TypeInfo *type, const TypeInfo *ref, Size len)
     type->hint = ref->hint;
 }
 
+static bool IsNameJsSafe(Span<const char> str)
+{
+    const auto test_char = [](int c) { return IsAsciiAlphaOrDigit(c) || c == '_'; };
+
+    // Struct definition forbids names that start with a digit so no need to revalidate
+    if (!std::all_of(str.begin(), str.end(), test_char))
+        return false;
+    if (StartsWith(str, "__"))
+        return false;
+
+    return true;
+}
+
+static void InitConverters(Napi::Env env, const TypeInfo *type)
+{
+    K_ASSERT(!type->decode);
+    K_ASSERT(!type->encode);
+
+    if (type->primitive != PrimitiveKind::Record)
+        return;
+
+    static const Span<const char> DecodeIntro = R"(
+(function (view) {
+    return () => ({
+)";
+    static const Span<const char> DecodeOutro = R"(    });
+})
+)";
+
+    static const Span<const char> EncodeIntro = R"(
+(function build(view) {
+    return (obj) => {
+)";
+    static const Span<const char> EncodeOutro = R"(    };
+})
+)";
+
+#if defined(K_BIG_ENDIAN)
+    static const char *const DirectLeArg = "false";
+    static const char *const SwapLeArg = "true";
+#else
+    static const char *const DirectLeArg = "true";
+    static const char *const SwapLeArg = "false";
+#endif
+
+    // Heuristics, probably needs adjustments!
+    if (type->size >= 128 || type->members.len >= 16)
+        return;
+
+    HeapArray<char> decoder;
+    HeapArray<char> encoder;
+
+    const auto recurse = [&](const auto &recurse, const char *prefix, int depth, Span<const RecordMember> members, Size offset) -> bool {
+        if (depth > 4)
+            return false;
+
+        for (const RecordMember &member: members) {
+            Span<const char> name = member.name;
+            bool safe = IsNameJsSafe(name);
+
+            char path[2048];
+
+            if (safe) [[likely]] {
+                Fmt(&decoder, "%1%2: ", FmtRepeat("    ", depth + 1), name);
+                Fmt(path, "%1.%2", prefix, name);
+            } else {
+                Fmt(&decoder, "%1[\'%2\']: ", FmtRepeat("    ", depth + 1), FmtEscape(name, '\''));
+                Fmt(path, "%1['%2']", prefix, FmtEscape(name, '\''));
+            }
+
+            switch (member.type->primitive) {
+                case PrimitiveKind::Int8: {
+                    Fmt(&decoder, "view.getInt8(%1),\n", offset + member.offset);
+                    Fmt(&encoder, "        view.setInt8(%1, %2);\n", offset + member.offset, path);
+                } break;
+                case PrimitiveKind::UInt8: {
+                    Fmt(&decoder, "view.getUint8(%1),\n", offset + member.offset);
+                    Fmt(&encoder, "        view.setUint8(%1, %2);\n", offset + member.offset, path);
+                } break;
+                case PrimitiveKind::Int16: {
+                    Fmt(&decoder, "view.getInt16(%1, %2),\n", offset + member.offset, DirectLeArg);
+                    Fmt(&encoder, "        view.setInt16(%1, %2, %3);\n", offset + member.offset, path, DirectLeArg);
+                } break;
+                case PrimitiveKind::Int16S: {
+                    Fmt(&decoder, "view.getInt16(%1, %2),\n", offset + member.offset, SwapLeArg);
+                    Fmt(&encoder, "        view.setInt16(%1, %2, %3);\n", offset + member.offset, path, SwapLeArg);
+                } break;
+                case PrimitiveKind::UInt16: {
+                    Fmt(&decoder, "view.getUint16(%1, %2),\n", offset + member.offset, DirectLeArg);
+                    Fmt(&encoder, "        view.setUint16(%1, %2, %3);\n", offset + member.offset, path, DirectLeArg);
+                } break;
+                case PrimitiveKind::UInt16S: {
+                    Fmt(&decoder, "view.getUint16(%1, %2),\n", offset + member.offset, SwapLeArg);
+                    Fmt(&encoder, "        view.setUint16(%1, %2, %3);\n", offset + member.offset, path, SwapLeArg);
+                } break;
+                case PrimitiveKind::Int32: {
+                    Fmt(&decoder, "view.getInt32(%1, %2),\n", offset + member.offset, DirectLeArg);
+                    Fmt(&encoder, "        view.setInt32(%1, %2, %3);\n", offset + member.offset, path, DirectLeArg);
+                } break;
+                case PrimitiveKind::Int32S: {
+                    Fmt(&decoder, "view.getInt32(%1, %2),\n", offset + member.offset, SwapLeArg);
+                    Fmt(&encoder, "        view.setInt32(%1, %2, %3);\n", offset + member.offset, path, SwapLeArg);
+                } break;
+                case PrimitiveKind::UInt32: {
+                    Fmt(&decoder, "view.getUint32(%1, %2),\n", offset + member.offset, DirectLeArg);
+                    Fmt(&encoder, "        view.setUint32(%1, %2, %3);\n", offset + member.offset, path, DirectLeArg);
+                } break;
+                case PrimitiveKind::UInt32S: {
+                    Fmt(&decoder, "view.getUint32(%1, %2),\n", offset + member.offset, SwapLeArg);
+                    Fmt(&encoder, "        view.setUint32(%1, %2, %3);\n", offset + member.offset, path, SwapLeArg);
+                } break;
+
+                case PrimitiveKind::Float32: {
+                    Fmt(&decoder, "view.getFloat32(%1, %2),\n", offset + member.offset, DirectLeArg);
+                    Fmt(&encoder, "        view.setFloat32(%1, %2 ?? 0, %3);\n", offset + member.offset, path, DirectLeArg);
+                } break;
+                case PrimitiveKind::Float64: {
+                    Fmt(&decoder, "view.getFloat64(%1, %2),\n", offset + member.offset, DirectLeArg);
+                    Fmt(&encoder, "        view.setFloat64(%1, %2 ?? 0, %3);\n", offset + member.offset, path, DirectLeArg);
+                } break;
+
+                case PrimitiveKind::Record: {
+                    Fmt(&decoder, "{\n");
+                    if (!recurse(recurse, path, depth + 1, member.type->members, offset + member.offset))
+                        return false;
+                    Fmt(&decoder, "%1},\n", FmtRepeat("    ", depth + 1));
+                } break;
+
+                case PrimitiveKind::Void:
+                case PrimitiveKind::Bool:
+                case PrimitiveKind::Int64:
+                case PrimitiveKind::Int64S:
+                case PrimitiveKind::UInt64:
+                case PrimitiveKind::UInt64S:
+                case PrimitiveKind::String:
+                case PrimitiveKind::String16:
+                case PrimitiveKind::String32:
+                case PrimitiveKind::Pointer:
+                case PrimitiveKind::Union:
+                case PrimitiveKind::Array:
+                case PrimitiveKind::Callback:
+                case PrimitiveKind::Prototype: return false;
+            }
+        }
+
+        return true;
+    };
+
+    decoder.Append(DecodeIntro);
+    encoder.Append(EncodeIntro);
+    if (!recurse(recurse, "obj", 1, type->members, 0))
+        return;
+    decoder.Append(DecodeOutro);
+    encoder.Append(EncodeOutro);
+
+    napi_value view;
+    void *buf;
+    {
+        napi_value ab;
+        NAPI_OK(napi_create_arraybuffer(env, (size_t)type->size, &buf, &ab));
+        NAPI_OK(napi_create_dataview(env, (size_t)type->size, ab, 0, &view));
+    }
+
+    napi_value decode;
+    napi_value encode;
+    {
+        napi_value undefined;
+        NAPI_OK(napi_get_undefined(env, &undefined));
+
+        // Decoder
+        {
+            napi_value str;
+            napi_value build;
+
+            NAPI_OK(napi_create_string_utf8(env, decoder.ptr, decoder.len, &str));
+
+            if (napi_run_script(env, str, &build) != napi_ok) {
+                env.GetAndClearPendingException();
+                return;
+            }
+            if (napi_call_function(env, undefined, build, 1, &view, &decode) != napi_ok) {
+                env.GetAndClearPendingException();
+                return;
+            }
+        }
+
+        // Encoder
+        {
+            napi_value str;
+            napi_value build;
+
+            NAPI_OK(napi_create_string_utf8(env, encoder.ptr, encoder.len, &str));
+
+            if (napi_run_script(env, str, &build) != napi_ok) {
+                env.GetAndClearPendingException();
+                return;
+            }
+
+            if (napi_call_function(env, undefined, build, 1, &view, &encode) != napi_ok) {
+                env.GetAndClearPendingException();
+                return;
+            }
+        }
+    }
+
+    NAPI_OK(napi_create_reference(env, decode, 1, &type->decode));
+    NAPI_OK(napi_create_reference(env, encode, 1, &type->encode));
+    type->convert_buf = (uint8_t *)buf;
+}
+
 static napi_value InitTypeDefinition(InstanceData *instance, const TypeInfo *type, bool temporary)
 {
     K_ASSERT(!type->defn);
@@ -650,6 +862,8 @@ static napi_value InitTypeDefinition(InstanceData *instance, const TypeInfo *typ
 
             members.Freeze();
             defn.Set("members", members);
+
+            InitConverters(env, type);
         } break;
 
         case PrimitiveKind::Prototype:
@@ -748,6 +962,9 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
                 reshaped->members.Reserve(type->members.len);
                 reshaped->size = 0;
                 reshaped->fill = (uint8_t)config.fill;
+                reshaped->decode = nullptr;
+                reshaped->encode = nullptr;
+                reshaped->convert_buf = nullptr;
                 NAPI_OK(napi_create_reference(env, defn, 1, &reshaped->defn));
 
                 for (RecordMember member: type->members) {
@@ -765,6 +982,8 @@ const TypeInfo *ReshapeAggregate(InstanceData *instance, const TypeInfo *type, c
 
                     member.key = nullptr;
                 }
+
+                InitConverters(env, reshaped);
             } break;
 
             case PrimitiveKind::Union: {

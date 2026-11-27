@@ -481,18 +481,17 @@ napi_value DecodeObject(InstanceData *instance, const uint8_t *origin, const Typ
         return wrapper;
     }
 
-    // Only supported in recent Node versions, and still experimental at this time
-    if (node_api_create_object_with_properties && type->members.len <= 256) {
-        napi_value properties[256];
-        napi_value values[256];
+    if (type->decode) {
+        napi_value undefined;
+        napi_value decode;
 
-        DecodeObject(instance, origin, type, [&](Size i, const RecordMember &member, napi_value value) {
-            NAPI_OK(napi_get_reference_value(env, member.key, &properties[i]));
-            values[i] = value;
-        });
+        NAPI_OK(napi_get_undefined(env, &undefined));
+        NAPI_OK(napi_get_reference_value(env, type->decode, &decode));
 
-        napi_value obj;
-        NAPI_OK(node_api_create_object_with_properties(env, instance->object_constructor.Value(), properties, values, type->members.len, &obj));
+        MemCpy(type->convert_buf, origin, type->size);
+
+        napi_value obj = nullptr;
+        napi_call_function(env, undefined, decode, 0, nullptr, &obj);
 
         return obj;
     }

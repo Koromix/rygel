@@ -49,8 +49,6 @@ napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env, napi_f
 napi_status (NAPI_CDECL *node_api_delete_reference)(node_api_basic_env env, napi_ref ref);
 napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
-napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
-                                                                 const napi_value *property_values, size_t property_count, napi_value *result);
 
 static bool ChangeSize(InstanceData *instance, const char *name, Napi::Value value, Size min_size, Size max_size, Size *out_size)
 {
@@ -2820,8 +2818,6 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
             } else {
                 node_api_delete_reference = napi_delete_reference;
             }
-
-            node_api_create_object_with_properties = SYMBOL(node_api_create_object_with_properties);
 
 #undef SYMBOL
         });

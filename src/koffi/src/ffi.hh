@@ -132,10 +132,14 @@ struct TypeInfo {
     const FunctionInfo *proto = nullptr; // Callback only
     const char *countedby = nullptr; // Pointer or array
 
-    mutable uint32_t type_idx = 0;
+    mutable napi_ref decode = nullptr; // Record
+    mutable napi_ref encode = nullptr; // Record
+    mutable uint8_t *convert_buf = nullptr; // (same)
+
     mutable napi_ref construct = nullptr; // Union only
     mutable napi_ref defn = nullptr;
 
+    mutable uint32_t type_idx = 0;
     mutable const TypeInfo *reshaped = nullptr;
 
     TypeInfo() = default;
@@ -418,8 +422,6 @@ extern napi_status (NAPI_CDECL *node_api_post_finalizer)(node_api_basic_env env,
 extern napi_status (NAPI_CDECL *node_api_delete_reference)(node_api_basic_env env, napi_ref ref);
 extern napi_status (NAPI_CDECL *node_api_get_buffer_info)(napi_env env, napi_value value, void **data, size_t *length);
 extern napi_status (NAPI_CDECL *node_api_create_property_key_utf8)(napi_env env, const char* str, size_t length, napi_value* result);
-extern napi_status (NAPI_CDECL *node_api_create_object_with_properties)(napi_env env, napi_value prototype_or_null, const napi_value *property_names,
-                                                                        const napi_value *property_values, size_t property_count, napi_value *result);
 
 AsyncCall *AllocateAsyncCall(InstanceData *instance);
 void ReleaseAsyncCall(InstanceData *instance, AsyncCall *async);
