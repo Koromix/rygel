@@ -295,6 +295,10 @@ async function editDrop(drop) {
                     <input type="text" name="name" value=${drop.name} />
                 </label>
                 <label>
+                    <span>${T.description} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                    <textarea name="comment">${drop.comment ?? ''}</textarea>
+                </label>
+                <label>
                     <span>${T.expiration}</span>
                     <select name="expiration">
                         ${delay_mismatch ? html`
@@ -306,10 +310,6 @@ async function editDrop(drop) {
                         ${ENV.durations.map(duration => html`<option value=${duration} ?selected=${duration == delay}>${formatDuration(duration)}</option>`)}
                         ${ENV.allow_infinite ? html`<option value="0" ?selected=${drop.expire == null}>${T.no_expiration}</option>` : ''}
                     </select>
-                </label>
-                <label>
-                    <span>${T.comment} <span class="sub">(${T.optional.toLowerCase()})</span></span>
-                    <textarea name="comment">${drop.comment ?? ''}</textarea>
                 </label>
             </div>
 
@@ -772,12 +772,20 @@ async function runSend() {
             <form @submit=${UI.wrap(submit)}>
                 <div class="block" style="align-items: center;">
                     <label>
-                        <span>${T.title} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                        <span>${T.title}</span>
                         <input type="text" name="name" placeholder=${send_files.length ? name_placeholder : ''} />
                     </label>
                     <label>
-                        <span>${T.comment} <span class="sub">(${T.optional.toLowerCase()})</span></span>
+                        <span>${T.description} <span class="sub">(${T.optional.toLowerCase()})</span></span>
                         <textarea name="comment"></textarea>
+                    </label>
+                    <label>
+                        <span>${T.expiration}</span>
+                        <select name="expiration">
+                            ${ENV.durations.map(duration =>
+                                html`<option value=${duration} ?selected=${duration == ENV.default_duration}>${formatDuration(duration)}</option>`)}
+                            ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
+                        </select>
                     </label>
                     <table class="responsive" style="table-layout: fixed;">
                         <colgroup>
@@ -806,14 +814,6 @@ async function runSend() {
                             </tr>
                         </tbody>
                     </table>
-                    <label>
-                        <span>${T.expiration}</span>
-                        <select name="expiration">
-                            ${ENV.durations.map(duration =>
-                                html`<option value=${duration} ?selected=${duration == ENV.default_duration}>${formatDuration(duration)}</option>`)}
-                            ${ENV.allow_infinite ? html`<option value="0">${T.no_expiration}</option>` : ''}
-                        </select>
-                    </label>
                     <label>
                         <span>${T.password} <span class="sub">(${T.optional.toLowerCase()})</span></span>
                         <input type="password" name="password" autocomplete="new-password" />
