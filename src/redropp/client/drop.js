@@ -89,7 +89,7 @@ async function runDrops() {
                             <tr>
                                 <td>
                                     <div style="display: flex; align-items: center;" title=${drop.name}>
-                                        <span class="nowrap" style="flex: 1;">${drop.name}</span>
+                                        <span class="nowrap" style=${'flex: 1;' + (has_expired ? ' text-decoration-line: line-through;' : '')}>${drop.name}</span>
                                         ${show_recover && can_recover ? html`
                                             <button type="button" class="small" title=""
                                                     @click=${UI.wrap(e => recoverLink(drop.kid))}>${T.recover_link}</button>
