@@ -208,6 +208,7 @@ Alternatively, it is licensed under any of the following:
 * [IPFS](https://github.com/ipfs/go-verifcid/issues/13)
 * [Iroh](https://www.iroh.computer/blog/blake3-hazmat-api)
 * [LLVM](https://reviews.llvm.org/D121510)
+* [Mold](https://arxiv.org/html/2608.23228v1)
 * [Nix](https://github.com/NixOS/nix/pull/12379)
 * [Nym](https://github.com/nymtech/nym/blob/59056a22c5e6b01a38da2124662bd1fa3c8abef2/common/nymsphinx/params/src/lib.rs#L5)
 * [OpenZFS](https://github.com/openzfs/zfs/)

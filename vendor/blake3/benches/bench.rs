@@ -2,7 +2,6 @@
 
 extern crate test;
 
-use arrayref::array_ref;
 use arrayvec::ArrayVec;
 use blake3::OUT_LEN;
 use blake3::platform::{MAX_SIMD_DEGREE, Platform};
@@ -52,7 +51,7 @@ impl RandomInput {
 fn bench_single_compression_fn(b: &mut Bencher, platform: Platform) {
     let mut state = [1u32; 8];
     let mut r = RandomInput::new(b, 64);
-    let input = array_ref!(r.get(), 0, 64);
+    let input = (&r.get()[..64]).try_into().unwrap();
     b.iter(|| platform.compress_in_place(&mut state, input, 64 as u8, 0, 0));
 }
 
@@ -95,7 +94,7 @@ fn bench_many_chunks_fn(b: &mut Bencher, platform: Platform) {
         let input_arrays: ArrayVec<&[u8; CHUNK_LEN], MAX_SIMD_DEGREE> = inputs
             .iter_mut()
             .take(degree)
-            .map(|i| array_ref!(i.get(), 0, CHUNK_LEN))
+            .map(|i| (&i.get()[..CHUNK_LEN]).try_into().unwrap())
             .collect();
         let mut out = [0; MAX_SIMD_DEGREE * OUT_LEN];
         platform.hash_many(
@@ -166,7 +165,7 @@ fn bench_many_parents_fn(b: &mut Bencher, platform: Platform) {
         let input_arrays: ArrayVec<&[u8; BLOCK_LEN], MAX_SIMD_DEGREE> = inputs
             .iter_mut()
             .take(degree)
-            .map(|i| array_ref!(i.get(), 0, BLOCK_LEN))
+            .map(|i| (&i.get()[..BLOCK_LEN]).try_into().unwrap())
             .collect();
         let mut out = [0; MAX_SIMD_DEGREE * OUT_LEN];
         platform.hash_many(

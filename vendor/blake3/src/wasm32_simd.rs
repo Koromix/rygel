@@ -20,7 +20,6 @@ use crate::{
     BLOCK_LEN, CVBytes, CVWords, IV, IncrementCounter, MSG_SCHEDULE, OUT_LEN, counter_high,
     counter_low,
 };
-use arrayref::{array_mut_ref, array_ref, mut_array_refs};
 
 pub const DEGREE: usize = 4;
 
@@ -555,11 +554,13 @@ unsafe fn transpose_msg_vecs(inputs: &[*const u8; DEGREE], block_offset: usize) 
             loadu(inputs[3].add(block_offset + 3 * 4 * DEGREE)),
         ]
     };
-    let squares = mut_array_refs!(&mut vecs, DEGREE, DEGREE, DEGREE, DEGREE);
-    transpose_vecs(squares.0);
-    transpose_vecs(squares.1);
-    transpose_vecs(squares.2);
-    transpose_vecs(squares.3);
+    let (square0, rest) = vecs.split_at_mut(DEGREE);
+    let (square1, rest) = rest.split_at_mut(DEGREE);
+    let (square2, square3) = rest.split_at_mut(DEGREE);
+    transpose_vecs(square0.try_into().unwrap());
+    transpose_vecs(square1.try_into().unwrap());
+    transpose_vecs(square2.try_into().unwrap());
+    transpose_vecs(square3.try_into().unwrap());
     vecs
 }
 
@@ -656,9 +657,9 @@ pub unsafe fn hash4(
         block_flags = flags;
     }
 
-    let squares = mut_array_refs!(&mut h_vecs, DEGREE, DEGREE);
-    transpose_vecs(squares.0);
-    transpose_vecs(squares.1);
+    let (square0, square1) = h_vecs.split_at_mut(DEGREE);
+    transpose_vecs(square0.try_into().unwrap());
+    transpose_vecs(square1.try_into().unwrap());
     // The first four vecs now contain the first half of each output, and the
     // second four vecs contain the second half of each output.
     unsafe {
@@ -693,7 +694,7 @@ unsafe fn hash1<const N: usize>(
         }
         compress_in_place(
             &mut cv,
-            array_ref!(slice, 0, BLOCK_LEN),
+            (&slice[..BLOCK_LEN]).try_into().unwrap(),
             BLOCK_LEN as u8,
             counter,
             block_flags,
@@ -732,7 +733,7 @@ pub unsafe fn hash_many<const N: usize>(
                 flags,
                 flags_start,
                 flags_end,
-                array_mut_ref!(out, 0, DEGREE * OUT_LEN),
+                (&mut out[..DEGREE * OUT_LEN]).try_into().unwrap(),
             );
         }
         if increment_counter.yes() {
@@ -750,7 +751,7 @@ pub unsafe fn hash_many<const N: usize>(
                 flags,
                 flags_start,
                 flags_end,
-                array_mut_ref!(output, 0, OUT_LEN),
+                (&mut output[..OUT_LEN]).try_into().unwrap(),
             );
         }
         if increment_counter.yes() {

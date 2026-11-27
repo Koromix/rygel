@@ -2,9 +2,7 @@
 // could share more of it in the future.
 
 use crate::{BLOCK_LEN, CHUNK_LEN, OUT_LEN};
-use arrayref::{array_mut_ref, array_ref};
 use arrayvec::ArrayVec;
-use core::usize;
 use rand::prelude::*;
 
 const CHUNK_START: u8 = 1 << 0;
@@ -75,14 +73,14 @@ fn paint_test_input(buf: &mut [u8]) {
 #[inline(always)]
 fn le_bytes_from_words_32(words: &[u32; 8]) -> [u8; 32] {
     let mut out = [0; 32];
-    *array_mut_ref!(out, 0 * 4, 4) = words[0].to_le_bytes();
-    *array_mut_ref!(out, 1 * 4, 4) = words[1].to_le_bytes();
-    *array_mut_ref!(out, 2 * 4, 4) = words[2].to_le_bytes();
-    *array_mut_ref!(out, 3 * 4, 4) = words[3].to_le_bytes();
-    *array_mut_ref!(out, 4 * 4, 4) = words[4].to_le_bytes();
-    *array_mut_ref!(out, 5 * 4, 4) = words[5].to_le_bytes();
-    *array_mut_ref!(out, 6 * 4, 4) = words[6].to_le_bytes();
-    *array_mut_ref!(out, 7 * 4, 4) = words[7].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[0 * 4..][..4]).unwrap() = words[0].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[1 * 4..][..4]).unwrap() = words[1].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[2 * 4..][..4]).unwrap() = words[2].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[3 * 4..][..4]).unwrap() = words[3].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[4 * 4..][..4]).unwrap() = words[4].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[5 * 4..][..4]).unwrap() = words[5].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[6 * 4..][..4]).unwrap() = words[6].to_le_bytes();
+    *<&mut [u8; 4]>::try_from(&mut out[7 * 4..][..4]).unwrap() = words[7].to_le_bytes();
     out
 }
 
@@ -224,7 +222,11 @@ pub fn test_hash_many_fn(hash_many_fn: HashManyFn) {
         // First hash chunks.
         let mut chunks = ArrayVec::<&[u8; CHUNK_LEN], NUM_INPUTS>::new();
         for i in 0..NUM_INPUTS {
-            chunks.push(array_ref!(input_buf, i * CHUNK_LEN, CHUNK_LEN));
+            chunks.push(
+                (&input_buf[i * CHUNK_LEN..][..CHUNK_LEN])
+                    .try_into()
+                    .unwrap(),
+            );
         }
         let mut portable_chunks_out = [0; NUM_INPUTS * OUT_LEN];
         unsafe {
@@ -268,7 +270,11 @@ pub fn test_hash_many_fn(hash_many_fn: HashManyFn) {
         // Then hash parents.
         let mut parents = ArrayVec::<&[u8; 2 * OUT_LEN], NUM_INPUTS>::new();
         for i in 0..NUM_INPUTS {
-            parents.push(array_ref!(input_buf, i * 2 * OUT_LEN, 2 * OUT_LEN));
+            parents.push(
+                (&input_buf[i * 2 * OUT_LEN..][..2 * OUT_LEN])
+                    .try_into()
+                    .unwrap(),
+            );
         }
         let mut portable_parents_out = [0; NUM_INPUTS * OUT_LEN];
         unsafe {

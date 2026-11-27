@@ -2,7 +2,6 @@ use crate::{
     BLOCK_LEN, CVBytes, CVWords, IV, IncrementCounter, MSG_SCHEDULE, OUT_LEN, counter_high,
     counter_low,
 };
-use arrayref::{array_mut_ref, array_ref};
 
 #[inline(always)]
 fn g(state: &mut [u32; 16], a: usize, b: usize, c: usize, d: usize, x: u32, y: u32) {
@@ -139,7 +138,7 @@ pub fn hash1<const N: usize>(
         }
         compress_in_place(
             &mut cv,
-            array_ref!(slice, 0, BLOCK_LEN),
+            (&slice[..BLOCK_LEN]).try_into().unwrap(),
             BLOCK_LEN as u8,
             counter,
             block_flags,
@@ -169,7 +168,7 @@ pub fn hash_many<const N: usize>(
             flags,
             flags_start,
             flags_end,
-            array_mut_ref!(output, 0, OUT_LEN),
+            (&mut output[..OUT_LEN]).try_into().unwrap(),
         );
         if increment_counter.yes() {
             counter += 1;

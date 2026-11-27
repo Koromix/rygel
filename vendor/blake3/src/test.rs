@@ -1,7 +1,5 @@
 use crate::{BLOCK_LEN, CHUNK_LEN, CVBytes, CVWords, IncrementCounter, OUT_LEN};
-use arrayref::array_ref;
 use arrayvec::ArrayVec;
-use core::usize;
 use rand::prelude::*;
 
 // Interesting input lengths to run tests on.
@@ -133,7 +131,11 @@ pub fn test_hash_many_fn(
         // First hash chunks.
         let mut chunks = ArrayVec::<&[u8; CHUNK_LEN], NUM_INPUTS>::new();
         for i in 0..NUM_INPUTS {
-            chunks.push(array_ref!(input_buf, i * CHUNK_LEN, CHUNK_LEN));
+            chunks.push(
+                (&input_buf[i * CHUNK_LEN..][..CHUNK_LEN])
+                    .try_into()
+                    .unwrap(),
+            );
         }
         let mut portable_chunks_out = [0; NUM_INPUTS * OUT_LEN];
         crate::portable::hash_many(
@@ -172,7 +174,11 @@ pub fn test_hash_many_fn(
         // Then hash parents.
         let mut parents = ArrayVec::<&[u8; 2 * OUT_LEN], NUM_INPUTS>::new();
         for i in 0..NUM_INPUTS {
-            parents.push(array_ref!(input_buf, i * 2 * OUT_LEN, 2 * OUT_LEN));
+            parents.push(
+                (&input_buf[i * 2 * OUT_LEN..][..2 * OUT_LEN])
+                    .try_into()
+                    .unwrap(),
+            );
         }
         let mut portable_parents_out = [0; NUM_INPUTS * OUT_LEN];
         crate::portable::hash_many(
@@ -350,18 +356,27 @@ fn test_compare_reference_impl() {
 
             // all at once
             let test_out = crate::hash(input);
-            assert_eq!(test_out, *array_ref!(expected_out, 0, 32));
+            assert_eq!(
+                test_out,
+                *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+            );
             // incremental
             let mut hasher = crate::Hasher::new();
             hasher.update(input);
-            assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
+            assert_eq!(
+                hasher.finalize(),
+                *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+            );
             assert_eq!(hasher.finalize(), test_out);
             // incremental (rayon)
             #[cfg(feature = "rayon")]
             {
                 let mut hasher = crate::Hasher::new();
                 hasher.update_rayon(input);
-                assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
+                assert_eq!(
+                    hasher.finalize(),
+                    *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+                );
                 assert_eq!(hasher.finalize(), test_out);
             }
             // xof
@@ -379,18 +394,27 @@ fn test_compare_reference_impl() {
 
             // all at once
             let test_out = crate::keyed_hash(&TEST_KEY, input);
-            assert_eq!(test_out, *array_ref!(expected_out, 0, 32));
+            assert_eq!(
+                test_out,
+                *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+            );
             // incremental
             let mut hasher = crate::Hasher::new_keyed(&TEST_KEY);
             hasher.update(input);
-            assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
+            assert_eq!(
+                hasher.finalize(),
+                *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+            );
             assert_eq!(hasher.finalize(), test_out);
             // incremental (rayon)
             #[cfg(feature = "rayon")]
             {
                 let mut hasher = crate::Hasher::new_keyed(&TEST_KEY);
                 hasher.update_rayon(input);
-                assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
+                assert_eq!(
+                    hasher.finalize(),
+                    *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+                );
                 assert_eq!(hasher.finalize(), test_out);
             }
             // xof
@@ -413,15 +437,27 @@ fn test_compare_reference_impl() {
             // incremental
             let mut hasher = crate::Hasher::new_derive_key(context);
             hasher.update(input);
-            assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
-            assert_eq!(hasher.finalize(), *array_ref!(test_out, 0, 32));
+            assert_eq!(
+                hasher.finalize(),
+                *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+            );
+            assert_eq!(
+                hasher.finalize(),
+                *<&[u8; 32]>::try_from(&test_out[..32]).unwrap()
+            );
             // incremental (rayon)
             #[cfg(feature = "rayon")]
             {
                 let mut hasher = crate::Hasher::new_derive_key(context);
                 hasher.update_rayon(input);
-                assert_eq!(hasher.finalize(), *array_ref!(expected_out, 0, 32));
-                assert_eq!(hasher.finalize(), *array_ref!(test_out, 0, 32));
+                assert_eq!(
+                    hasher.finalize(),
+                    *<&[u8; 32]>::try_from(&expected_out[..32]).unwrap()
+                );
+                assert_eq!(
+                    hasher.finalize(),
+                    *<&[u8; 32]>::try_from(&test_out[..32]).unwrap()
+                );
             }
             // xof
             let mut extended = [0; OUT];
@@ -695,14 +731,19 @@ fn test_hex_encoding_decoding() {
     #[cfg(feature = "std")]
     assert_eq!(_result.to_string(), "expected 64 hex bytes, received 13");
 
-    let bad_char = "Z4e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702e9";
-    let _result = crate::Hash::from_hex(bad_char).unwrap_err();
+    let first_bad_char = "Z4e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702e9";
+    let _result = crate::Hash::from_hex(first_bad_char).unwrap_err();
     #[cfg(feature = "std")]
-    assert_eq!(_result.to_string(), "invalid hex character: 'Z'");
+    assert_eq!(_result.to_string(), "invalid hex character");
+
+    let last_bad_char = "04e0bb39f30b1a3feb89f536c93be15055482df748674b00d26e5a75777702eZ";
+    let _result = crate::Hash::from_hex(last_bad_char).unwrap_err();
+    #[cfg(feature = "std")]
+    assert_eq!(_result.to_string(), "invalid hex character");
 
     let _result = crate::Hash::from_hex([128; 64]).unwrap_err();
     #[cfg(feature = "std")]
-    assert_eq!(_result.to_string(), "invalid hex character: 0x80");
+    assert_eq!(_result.to_string(), "invalid hex character");
 }
 
 // This test is a mimized failure case for the Windows SSE2 bug described in
@@ -773,6 +814,17 @@ const fn test_hash_const_conversions() {
     _ = hash.as_bytes();
 }
 
+#[test]
+fn test_block_buffer_alignment() {
+    // ChunkState.buf and Output.block are Aligned64 so that wide vector stores
+    // into them (e.g. from memcpy) can store-to-load forward regardless of
+    // stack layout. See the comment on Aligned64 in lib.rs, the measurements in
+    // https://github.com/zooko/bench-hashes/issues/2, and the before/after
+    // benchmarks in https://github.com/BLAKE3-team/BLAKE3/pull/582.
+    assert_eq!(64, core::mem::align_of::<crate::Aligned64>());
+    assert_eq!(0, core::mem::offset_of!(crate::Aligned64, 0));
+}
+
 #[cfg(feature = "zeroize")]
 #[test]
 fn test_zeroize() {
@@ -786,7 +838,7 @@ fn test_zeroize() {
         chunk_state: crate::ChunkState {
             cv: [42; 8],
             chunk_counter: 42,
-            buf: [42; 64],
+            buf: crate::Aligned64([42; 64]),
             buf_len: 42,
             blocks_compressed: 42,
             flags: 42,
@@ -814,7 +866,7 @@ fn test_zeroize() {
     let mut output_reader = crate::OutputReader {
         inner: crate::Output {
             input_chaining_value: [42; 8],
-            block: [42; 64],
+            block: crate::Aligned64([42; 64]),
             counter: 42,
             block_len: 42,
             flags: 42,
@@ -1045,5 +1097,25 @@ mod guts_tests {
         let parent = parent_cv(&chunk0_cv, &chunk1_cv, false);
         let root = parent_cv(&parent, &chunk2_cv, true);
         assert_eq!(hasher.finalize(), root);
+    }
+}
+
+#[test]
+// There's a debug_assert that we fail for non-multiple-of-64 lengths.
+#[cfg_attr(debug_assertions, should_panic)]
+fn test_xof_many_rounds_down() {
+    let platform = crate::platform::Platform::detect();
+    for i in 0..=128 {
+        let mut out = [0; 128];
+        platform.xof_many(&[42; 8], &[99; 64], 64, 0, 0, &mut out[..i]);
+        if i < 64 {
+            assert_eq!(out, [0; 128]);
+        } else if i < 128 {
+            assert_ne!(out[..64], [0; 64]);
+            assert_eq!(out[64..], [0; 64]);
+        } else {
+            assert_ne!(out[..64], [0; 64]);
+            assert_ne!(out[64..], [0; 64]);
+        }
     }
 }

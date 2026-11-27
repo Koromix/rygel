@@ -1,6 +1,6 @@
 [package]
 name = "blake3"
-version = "1.8.6"
+version = "1.8.8"
 authors = ["Jack O'Connor <oconnor663@gmail.com>", "Samuel Neves"]
 description = "the BLAKE3 hash function"
 repository = "https://github.com/BLAKE3-team/BLAKE3"
@@ -112,9 +112,8 @@ no_neon = []
 features = ["mmap", "rayon", "serde", "zeroize"]
 
 [dependencies]
-arrayref = "0.3.5"
 arrayvec = { version = "0.7.4", default-features = false }
-constant_time_eq = { version = "0.4.2", default-features = false }
+constant_time_eq = { version = "0.6.2", default-features = false }
 cfg-if = "1.0.0"
 digest = { version = "0.11.2", features = ["mac"], optional = true }
 memmap2 = { version = "0.9", optional = true }
