@@ -2966,7 +2966,7 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
     // Init internal JS functions
     {
         napi_value wrap_variadic = env.RunScript(R"(
-            function wrap(info, specialize) {
+            (function (info, specialize) {
                 let required = info.arguments.length;
 
                 let cache_types = [Symbol()];
@@ -3010,24 +3010,22 @@ static Napi::Object InitModule(Napi::Env env, Napi::Object exports)
                     return builder(specialized, fallback, ...types);
                 }
 
+                function map(length, func) {
+                    let array = new Array(length);
+
+                    for (let i = 0; i < length; i++)
+                        array[i] = func(i);
+
+                    return array;
+                }
+
                 cache_func = fallback;
 
                 function run(...args) { return cache_func(...args); }
                 run.info = info;
 
                 return run;
-            }
-
-            function map(length, func) {
-                let array = new Array(length);
-
-                for (let i = 0; i < length; i++)
-                    array[i] = func(i);
-
-                return array;
-            }
-
-            wrap
+            })
         )");
 
         instance->wrap_variadic = Napi::Persistent(Napi::Function(env, wrap_variadic));
