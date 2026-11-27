@@ -449,13 +449,14 @@ form {
         gap: 0.43em;
         align-items: start;
         min-height: 2em;
-        min-width: 500px;
 
         & > span:first-child {
             width: 220px;
             flex: 1;
         }
         & > span:first-child + :is(textarea, input[type=text], input[type=password]) { flex: 1; }
+
+        &:has(> span:first-child) { min-width: 600px; }
     }
     & label:has(> :only-child) { justify-content: center; }
     & label:empty { display: none; }
@@ -468,7 +469,7 @@ input {
     border: 1px solid var(--input_color);
     border-radius: var(--input_radius);
     font: inherit;
-    font-size: 1em;
+    font-size: 0.9em;
 }
 textarea {
     align-self: stretch;
@@ -478,7 +479,7 @@ textarea {
     border: 1px solid var(--input_color);
     border-radius: var(--input_radius);
     font: inherit;
-    font-size: 1em;
+    font-size: 0.9em;
 }
 select {
     padding: 0.2em calc(20px + 0.5em) 0.3em 0.5em;
@@ -496,7 +497,7 @@ select {
     text-overflow: ellipsis;
     white-space: nowrap;
     font-family: inherit;
-    font-size: 1em;
+    font-size: 0.9em;
 }
 :is(input, textarea, select):focus { background-color: white; }
 :is(input, textarea, select):disabled {
@@ -639,6 +640,8 @@ progress[value] {
             }
         }
     }
+
+    input, textarea, select { font-size: 1em; }
 }
 
 table {
@@ -684,7 +687,7 @@ table {
 }
 
 table.responsive {
-    min-width: calc(min(500px, 90%));
+    min-width: calc(min(600px, 90%));
     max-width: 96%;
     box-sizing: border-box;
 }
